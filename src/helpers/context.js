@@ -1,4 +1,4 @@
-const initializeApp = (cfg, args) => {
+const initializeContext = (cfg, args) => {
   const {acct, auth} = args;
   const context = {cfg, args};
   context.client = require('twilio')(acct, auth);
@@ -6,5 +6,5 @@ const initializeApp = (cfg, args) => {
 }
 
 module.exports = {
-  initializeApp
+  initializeContext
 }

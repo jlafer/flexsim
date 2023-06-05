@@ -1,4 +1,5 @@
 node_modules
 execution.txt
-notes.txt
+TODO.txt
 .env
+config/

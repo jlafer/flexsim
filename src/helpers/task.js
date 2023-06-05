@@ -1,11 +1,12 @@
 
 const submitTask = (ctx) => {
-  const {args, client} = ctx;
+  const { args, client, workflow } = ctx;
   client.taskrouter.v1.workspaces(args.wrkspc)
   .tasks
   .create({attributes: JSON.stringify({
      type: 'support'
-   }), workflowSid: args.wrkflo})
+  }), workflowSid: workflow.sid
+  })
   .then(task => console.log(task.sid));
 };
 

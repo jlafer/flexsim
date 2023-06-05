@@ -1,6 +1,6 @@
-const express = require('express')
+const express = require('express');
 const { parseAndValidateArgs } = require('./helpers/args');
-const { initializeContext } = require('./helpers/context');
+const { initializeCommonContext } = require('./helpers/context');
 //const { changeActivity, fetchWorkers } = require('./helpers/worker');
 //const { acceptRes, completeTask } = require('./helpers/task');
 
@@ -8,9 +8,8 @@ const args = parseAndValidateArgs();
 const { acct, auth } = args;
 console.log('acct:', acct);
 console.log('auth:', auth);
-//const cfg = readConfiguration(args);
-const cfg = {};
-const ctx = initializeContext(cfg, args);
+const cfg = readConfiguration(args)
+const ctx = initializeCommonContext(cfg, args);
 
 const app = express()
 const port = 3000
@@ -38,5 +37,3 @@ const initializeApp = (cfg, args) => {
     advanceTheAgent(i, 1);
   }
 }
-
-initializeApp(cfg, args);

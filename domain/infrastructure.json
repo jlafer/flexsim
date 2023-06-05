@@ -1,0 +1,18 @@
+{
+  "workers": [
+    {
+      "username": "jdoe",
+      "skills": [
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "channels": [
+        "voice",
+        "chat"
+      ],
+      "talkDelta": 1.1,
+      "wrapDelta": 1.15
+    }
+  ]
+}

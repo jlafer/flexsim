@@ -1,0 +1,56 @@
+{
+  "brand": "ACME",
+  "agentCnt": 5,
+  "arrivalRate": 15,
+  "dimensions": [
+    {
+      "name": "topic",
+      "src": "customer",
+      "values": [
+        "Checking",
+        "CreditCard",
+        "Mortgage",
+        "OtherLoans"
+      ]
+    },
+    {
+      "name": "channel",
+      "src": "customer",
+      "values": [
+        "voice",
+        "webchat",
+        "sms"
+      ]
+    },
+    {
+      "name": "activity",
+      "src": "admin",
+      "values": [
+        "Offline",
+        "Available",
+        "Busy",
+        "Break",
+        "Lunch"
+      ]
+    },
+    {
+      "name": "intent",
+      "src": "customer",
+      "values": [
+        "Check account balance",
+        "Check payment clearance",
+        "Change password",
+        "Inquire on rates"
+      ]
+    },
+    {
+      "name": "lang",
+      "src": "customer",
+      "values": [
+        "en-us",
+        "en-gb",
+        "sp-es"
+      ]
+    }
+  ]
+}

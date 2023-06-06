@@ -1,4 +1,5 @@
 require("dotenv").config();
+const faker = require('faker');
 const R = require('ramda');
 
 const { parseAndValidateArgs } = require('./helpers/args');
@@ -97,10 +98,12 @@ function getActivities(dimensions) {
 }
 
 const makeWorker = (i, skills) => {
-  const skill = getRandomSkill(skills);
-  const attributes = { skill, data: 'flexsim' };
   const agtNum = `${i}`.padStart(3, '0');
-  return { friendlyName: `Agent_${agtNum}`, attributes };
+  const friendlyName = `Agent_${agtNum}`;
+  const full_name = faker.name.findName();
+  const skill = getRandomSkill(skills);
+  const attributes = { skill, data: 'flexsim', contact_uri: `client:${friendlyName}`, full_name };
+  return { friendlyName, attributes };
 };
 
 function getRandomSkill(skills) {

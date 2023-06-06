@@ -1,6 +1,6 @@
 const R = require('ramda');
 
-const { hasAttributeValue } = require('./util');
+const { findObjInList, hasAttributeValue } = require('./util');
 
 const fetchTasks = async (ctx) => {
   const { args, client } = ctx;
@@ -16,13 +16,21 @@ const fetchFlexsimTasks = async (ctx) => {
 };
 
 const submitTask = async (ctx) => {
-  const { args, client, workflow } = ctx;
+  const { args, client, workflow, channels } = ctx;
+  const chat = findObjInList('uniqueName', 'chat', channels);
+  const sms = findObjInList('uniqueName', 'sms', channels);
+  const voice = findObjInList('uniqueName', 'voice', channels);
   const task = await client.taskrouter.v1.workspaces(args.wrkspc).tasks
-  .create({attributes: JSON.stringify({
-    source: 'flexsim',
-    type: 'support'
-  }), workflowSid: workflow.sid
-  });
+    .create(
+      {
+        taskChannel: voice.sid,
+        attributes: JSON.stringify({
+          source: 'flexsim',
+          type: 'support'
+        }),
+        workflowSid: workflow.sid
+      }
+    );
   return task;
 };
 

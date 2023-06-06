@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
@@ -23,6 +24,7 @@ async function fetchCurrInfra(context) {
   context.previous = {};
   context.previous.queues = await fetchQueues(context);
   context.previous.workflows = await fetchWorkflows(context);
+  context.activities = await fetchActivities(context);
 }
 
 async function removeOldInfra(context) {

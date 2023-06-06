@@ -1,6 +1,6 @@
 const R = require('ramda');
 
-const { hasAttributeValue } = require('./util');
+const { findObjInList, hasAttributeValue } = require('./util');
 
 const fetchWorkers = async (ctx) => {
   const { args, client } = ctx;
@@ -29,11 +29,15 @@ async function createWorkers(ctx) {
 }
 
 async function removeWorkers(ctx) {
-  const { args, client } = ctx;
+  const { args, client, activities } = ctx;
   const { wrkspc } = args;
+  const offlineAct = findObjInList('friendlyName', 'Offline', activities);
   const workers = await fetchFlexsimWorkers(ctx);
   for (let i = 0; i < workers.length; i++) {
-    const { sid, friendlyName } = workers[i];
+    const { sid, friendlyName, activityName } = workers[i];
+    if (activityName !== 'Offline') {
+      await changeActivity(ctx, sid, offlineAct.sid);
+    }
     console.log(`removing worker: ${friendlyName}`);
     await client.taskrouter.v1.workspaces(wrkspc).workers(sid).remove();
   }
@@ -51,7 +55,7 @@ const changeActivity = (ctx, sid, activitySid) => {
 
 function pickKeyProps(worker) {
   const attributes = JSON.parse(worker.attributes);
-  return { ...R.pick(['sid', 'friendlyName'], worker), attributes }
+  return { ...R.pick(['sid', 'friendlyName', 'activityName'], worker), attributes }
 }
 
 module.exports = {

@@ -1,12 +1,15 @@
 const R = require('ramda');
 
-const createChannel = (ctx) => {
-  const { args, client, config } = ctx;
-  log.info('generating channels from config...');
-  const channels = R.map(buildTaskChannel, config.channels);
-  return channels;
+const fetchTaskChannels = async (ctx) => {
+  const { args, client } = ctx;
+  const taskChannels = await client.taskrouter.v1.workspaces(args.wrkspc).taskChannels.list();
+  return taskChannels.map(pickKeyProps);
 };
 
+function pickKeyProps(channel) {
+  return { ...R.pick(['sid', 'friendlyName', 'uniqueName'], channel) }
+}
+
 module.exports = {
-  createChannel
+  fetchTaskChannels
 }

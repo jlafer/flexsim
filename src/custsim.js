@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const {parseAndValidateArgs} = require('./helpers/args');
+const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const {submitTask} = require('./helpers/task');
@@ -30,6 +31,7 @@ run();
 
 async function loadTwilioResources(context) {
   context.workflow = await fetchWorkflow(context);
+  context.channels = await fetchTaskChannels(context);
 }
 
 const initializeContext = (cfg, args) => {

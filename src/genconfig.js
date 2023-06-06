@@ -19,7 +19,7 @@ function genConfiguration(context) {
   const { domain } = context;
   const { agentCnt, dimensions } = domain;
   const cfg = {};
-  cfg.simulation = R.pick(['arrivalRate', 'brand'], domain);
+  cfg.simulation = R.pick(['arrivalRate', 'brand', 'handleTimeBase'], domain);
   cfg.topics = getTopics(dimensions);
   cfg.skills = genSkills(cfg.topics);
   cfg.channels = getChannels(dimensions);

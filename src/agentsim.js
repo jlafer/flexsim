@@ -27,6 +27,8 @@ async function init() {
 
   app.post('/reservation', (req, res) => {
     const { TaskSid, ReservationSid, WorkerSid } = req.body;
+    const { cfg } = context;
+    const { simulation } = cfg;
     const now = new Date();
     console.log(now);
     console.log(`  reservation ${ReservationSid} for task ${TaskSid} assigned to worker ${WorkerSid}`);
@@ -37,7 +39,7 @@ async function init() {
         console.log(`  completing task ${TaskSid} assigned to worker ${WorkerSid}`);
         completeTask(context, TaskSid);
       },
-      5000
+      (simulation.handleTimeBase * 1000)
     );
     res.send({ instruction: 'accept' });
   })

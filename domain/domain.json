@@ -2,6 +2,7 @@
   "brand": "ACME",
   "agentCnt": 5,
   "arrivalRate": 15,
+  "handleTimeBase": 30,
   "dimensions": [
     {
       "name": "topic",

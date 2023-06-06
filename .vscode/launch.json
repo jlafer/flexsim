@@ -46,6 +46,21 @@
         "-t",
         "10"
       ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "AgentSim",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/src/agentsim.js",
+      "args": [
+        "-c",
+        "config",
+        "-t",
+        "60"
+      ]
     }
   ]
 }

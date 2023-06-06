@@ -1,9 +1,18 @@
-const fetchWorkers = (ctx) => {
+const R = require('ramda');
+
+const { hasAttributeValue } = require('./util');
+
+const fetchWorkers = async (ctx) => {
   const { args, client } = ctx;
-  client.taskrouter.v1.workspaces(args.wrkspc).workers.list()
-    .then(workers => {
-      return workers;
-    })
+  const allWorkers = await client.taskrouter.v1.workspaces(args.wrkspc).workers.list();
+  const workers = allWorkers.map(pickKeyProps);
+  return workers;
+};
+
+const fetchFlexsimWorkers = async (ctx) => {
+  const allWorkers = await fetchWorkers(ctx);
+  const workers = allWorkers.filter(hasAttributeValue('data', 'flexsim'));
+  return workers;
 };
 
 async function createWorkers(ctx) {
@@ -22,21 +31,17 @@ async function createWorkers(ctx) {
 async function removeWorkers(ctx) {
   const { args, client } = ctx;
   const { wrkspc } = args;
-  const workers = await client.taskrouter.v1.workspaces(wrkspc).workers
-    .list();
+  const workers = await fetchFlexsimWorkers(ctx);
   for (let i = 0; i < workers.length; i++) {
-    const { sid, friendlyName, attributes: attributesStr } = workers[i];
-    const attributes = JSON.parse(attributesStr);
-    if (attributes.data === 'flexsim') {
-      console.log(`removing worker: ${friendlyName}`);
-      await client.taskrouter.v1.workspaces(args.wrkspc).workers(sid).remove();
-    }
+    const { sid, friendlyName } = workers[i];
+    console.log(`removing worker: ${friendlyName}`);
+    await client.taskrouter.v1.workspaces(wrkspc).workers(sid).remove();
   }
 }
 
 const changeActivity = (ctx, sid, activitySid) => {
   const { args, client } = ctx;
-  client.taskrouter.v1.workspaces(args.wrkspc).workers(sid).update({
+  return client.taskrouter.v1.workspaces(args.wrkspc).workers(sid).update({
     activitySid
   })
     .then(worker => {
@@ -44,9 +49,15 @@ const changeActivity = (ctx, sid, activitySid) => {
     })
 };
 
+function pickKeyProps(worker) {
+  const attributes = JSON.parse(worker.attributes);
+  return { ...R.pick(['sid', 'friendlyName'], worker), attributes }
+}
+
 module.exports = {
   changeActivity,
   createWorkers,
+  fetchFlexsimWorkers,
   fetchWorkers,
   removeWorkers
 }

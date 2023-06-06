@@ -4,6 +4,8 @@ const findObjInList = R.curry((key, val, arr) =>
   R.find(R.propEq(val, key), arr)
 );
 
+const hasAttributeValue = R.curry((key, val, obj) => R.propEq(val, key, obj.attributes));
+
 const delay = (mSec) => {
   return new Promise(
     function (resolve, _reject) {
@@ -19,5 +21,6 @@ const delay = (mSec) => {
 
 module.exports = {
   delay,
-  findObjInList
+  findObjInList,
+  hasAttributeValue
 }

@@ -1,14 +1,20 @@
 require("dotenv").config();
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const R = require('ramda');
 
 const { parseAndValidateArgs } = require('./helpers/args');
+const { checkAndFillDomain } = require('./helpers/schema');
 const { readJsonFile, writeToJsonFile } = require('./helpers/files');
 
 async function run() {
   const args = getArgs();
   const { cfgdir } = args;
   const domain = await readDomainData(args);
+  const [valid, errors] = checkAndFillDomain(domain);
+  if (!valid) {
+    console.error('domain.json validation errors:', errors);
+    throw new Error('validation of domain.json failed');
+  }
   const context = { args, domain };
   const cfg = genConfiguration(context);
   await writeCfgToCfgdir(cfgdir, cfg);
@@ -18,13 +24,13 @@ run();
 
 function genConfiguration(context) {
   const { domain } = context;
-  const { agentCnt, dimensions } = domain;
+  const { agentCnt, properties } = domain;
   const cfg = {};
   cfg.simulation = R.pick(['arrivalRate', 'brand', 'handleTimeBase'], domain);
-  cfg.topics = getTopics(dimensions);
+  cfg.topics = getTopics(properties);
   cfg.skills = genSkills(cfg.topics);
-  cfg.channels = getChannels(dimensions);
-  cfg.activities = getActivities(dimensions);
+  cfg.channels = getChannels(properties);
+  cfg.activities = getActivities(properties);
   cfg.workers = genWorkers(agentCnt, cfg.skills);
   cfg.queues = cfg.topics.map(topicToQueue(cfg.skills));
   cfg.workflow = genWorkflow(cfg);
@@ -82,25 +88,25 @@ function genSkills(topics) {
   return topics.map(t => t);
 }
 
-function getTopics(dimensions) {
-  const dim = getDimension(dimensions, 'topic');
-  return dim.values;
+function getTopics(properties) {
+  const prop = getProperty(properties, 'topic');
+  return prop.values;
 }
 
-function getChannels(dimensions) {
-  const dim = getDimension(dimensions, 'channel');
-  return dim.values;
+function getChannels(properties) {
+  const prop = getProperty(properties, 'channel');
+  return prop.values;
 }
 
-function getActivities(dimensions) {
-  const dim = getDimension(dimensions, 'activity');
-  return dim.values;
+function getActivities(properties) {
+  const prop = getProperty(properties, 'activity');
+  return prop.values;
 }
 
 const makeWorker = (i, skills) => {
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
-  const full_name = faker.name.findName();
+  const full_name = faker.person.fullName();
   const skill = getRandomSkill(skills);
   const attributes = { skill, data: 'flexsim', contact_uri: `client:${friendlyName}`, full_name };
   return { friendlyName, attributes };
@@ -116,8 +122,8 @@ function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
 
-function getDimension(dimensions, name) {
-  return dimensions.find(dim => dim.name === name)
+function getProperty(properties, name) {
+  return properties.find(prop => prop.name === name)
 }
 
 async function writeCfgToCfgdir(cfgdir, cfg) {

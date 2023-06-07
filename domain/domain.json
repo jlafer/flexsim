@@ -3,10 +3,60 @@
   "agentCnt": 5,
   "arrivalRate": 15,
   "handleTimeBase": 30,
-  "dimensions": [
+  "workerAttributes": [
+    {
+      "name": "lang",
+      "mapping": [
+        0.33,
+        0.33,
+        0.34
+      ]
+    },
+    {
+      "name": "skill",
+      "property": "topic",
+      "mapping": [
+        0.20,
+        0.20,
+        0.35,
+        0.25
+      ]
+    }
+  ],
+  "taskAttributes": {
+    "arrival": [
+      {
+        "name": "channel",
+        "mapping": [
+          0.5,
+          0.3,
+          0.2
+        ]
+      },
+      {
+        "name": "topic",
+        "mapping": [
+          0.20,
+          0.20,
+          0.35,
+          0.25
+        ]
+      },
+      {
+        "name": "intent",
+        "mapping": [
+          0.20,
+          0.20,
+          0.35,
+          0.25
+        ]
+      }
+    ]
+  },
+  "properties": [
     {
       "name": "topic",
-      "src": "customer",
+      "expr": "mapped",
       "values": [
         "Checking",
         "CreditCard",
@@ -16,7 +66,7 @@
     },
     {
       "name": "channel",
-      "src": "customer",
+      "expr": "mapped",
       "values": [
         "voice",
         "webchat",
@@ -25,7 +75,7 @@
     },
     {
       "name": "activity",
-      "src": "admin",
+      "expr": "mapped",
       "values": [
         "Offline",
         "Available",
@@ -36,7 +86,7 @@
     },
     {
       "name": "intent",
-      "src": "customer",
+      "expr": "mapped",
       "values": [
         "Check account balance",
         "Check payment clearance",
@@ -46,7 +96,7 @@
     },
     {
       "name": "lang",
-      "src": "customer",
+      "expr": "mapped",
       "values": [
         "en-us",
         "en-gb",

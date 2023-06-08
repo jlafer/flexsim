@@ -1,61 +1,77 @@
-const Ajv = require('ajv/dist/jtd');
+const Ajv = require('ajv');
 
 const schema = {
+  type: 'object',
   properties: {
-    agentCnt: { type: 'int32' },
-    arrivalRate: { type: 'int32' },
-    handleTimeBase: { type: 'int32' },
+    agentCnt: { type: 'number', default: 15 },
+    arrivalRate: { type: 'number', default: 3 },
+    brand: { type: 'string', default: 'Owl Industries' },
+    handleTimeBase: { type: 'number', default: 30 },
     taskAttributes: {
+      type: 'object',
       properties: {
         arrival: {
-          elements: {
+          type: 'array',
+          items: {
+            type: 'object',
             properties: {
               name: { type: 'string' },
+              property: { type: 'string' },
               mapping: {
-                elements: {
-                  type: 'float32'
+                type: 'array',
+                items: {
+                  type: 'number'
                 }
               }
             },
-            optionalProperties: {
-              property: { type: 'string' }
-            }
+            required: ['name']
           }
         }
       },
     },
     workerAttributes: {
-      elements: {
+      type: 'array',
+      items: {
+        type: 'object',
         properties: {
           name: { type: 'string' },
+          property: { type: 'string' },
           mapping: {
-            elements: {
-              type: 'float32'
+            type: 'array',
+            items: {
+              type: 'number'
             }
           }
         },
-        optionalProperties: {
-          property: { type: 'string' }
-        }
+        required: ['name']
       },
     },
     properties: {
-      elements: {
+      type: 'array',
+      items: {
+        type: 'object',
         properties: {
           name: { type: 'string' },
-          expr: { type: 'string' },
-          values: {
-            elements: {
-              type: 'string'
-            }
-          }
+          expr: {
+            type: 'string',
+            enum: ['identity', 'range', 'enum'],
+            default: 'identity'
+          },
+          enum: {
+            type: 'array',
+            items: { type: 'string' }
+          },
+          curve: {
+            type: 'string',
+            enum: ['bell', 'uniform', 'log'],
+            default: 'uniform'
+          },
         },
+        required: ['name']
       },
     },
   },
-  optionalProperties: {
-    brand: { type: 'string' },
-  }
+  additionalProperties: true
 };
 
 const checkAndFillDomain = (domain) => {

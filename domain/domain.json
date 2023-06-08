@@ -1,8 +1,4 @@
 {
-  "brand": "ACME",
-  "agentCnt": 5,
-  "arrivalRate": 15,
-  "handleTimeBase": 30,
   "workerAttributes": [
     {
       "name": "lang",
@@ -56,8 +52,8 @@
   "properties": [
     {
       "name": "topic",
-      "expr": "mapped",
-      "values": [
+      "expr": "enum",
+      "enum": [
         "Checking",
         "CreditCard",
         "Mortgage",
@@ -66,8 +62,8 @@
     },
     {
       "name": "channel",
-      "expr": "mapped",
-      "values": [
+      "expr": "enum",
+      "enum": [
         "voice",
         "webchat",
         "sms"
@@ -75,8 +71,8 @@
     },
     {
       "name": "activity",
-      "expr": "mapped",
-      "values": [
+      "expr": "enum",
+      "enum": [
         "Offline",
         "Available",
         "Busy",
@@ -86,8 +82,8 @@
     },
     {
       "name": "intent",
-      "expr": "mapped",
-      "values": [
+      "expr": "enum",
+      "enum": [
         "Check account balance",
         "Check payment clearance",
         "Change password",
@@ -96,8 +92,8 @@
     },
     {
       "name": "lang",
-      "expr": "mapped",
-      "values": [
+      "expr": "enum",
+      "enum": [
         "en-us",
         "en-gb",
         "sp-es"

@@ -62,7 +62,8 @@ function getArgs() {
 
 async function readConfiguration(args) {
   const { cfgdir } = args;
+  const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   const workflow = await readJsonFile(`${cfgdir}/workflow.json`);
   const simulation = await readJsonFile(`${cfgdir}/simulation.json`);
-  return { simulation, workflow };
+  return { metadata, simulation, workflow };
 }

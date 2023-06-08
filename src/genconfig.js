@@ -3,6 +3,7 @@ const { faker } = require('@faker-js/faker');
 const R = require('ramda');
 
 const { parseAndValidateArgs } = require('./helpers/args');
+const { calcCustomAttrs } = require('./helpers/calcs');
 const { checkAndFillDomain } = require('./helpers/schema');
 const { readJsonFile, writeToJsonFile } = require('./helpers/files');
 
@@ -10,6 +11,7 @@ async function run() {
   const args = getArgs();
   const { cfgdir } = args;
   const domain = await readDomainData(args);
+  // NOTE: checkAndFillDomain mutates 'domain'
   const [valid, errors] = checkAndFillDomain(domain);
   if (!valid) {
     console.error('domain.json validation errors:', errors);
@@ -26,21 +28,25 @@ function genConfiguration(context) {
   const { domain } = context;
   const { agentCnt, properties } = domain;
   const cfg = {};
+  cfg.metadata = R.pick(
+    ['properties', 'taskAttributes', 'workerAttributes'],
+    domain
+  );
   cfg.simulation = R.pick(['arrivalRate', 'brand', 'handleTimeBase'], domain);
   cfg.topics = getTopics(properties);
   cfg.skills = genSkills(cfg.topics);
   cfg.channels = getChannels(properties);
   cfg.activities = getActivities(properties);
-  cfg.workers = genWorkers(agentCnt, cfg.skills);
+  cfg.workers = genWorkers(agentCnt, cfg.metadata);
   cfg.queues = cfg.topics.map(topicToQueue(cfg.skills));
   cfg.workflow = genWorkflow(cfg);
   return cfg;
 }
 
-function genWorkers(agentCnt, skills) {
+function genWorkers(agentCnt, metadata) {
   const workers = [];
   for (let i = 0; i < agentCnt; i++) {
-    const data = makeWorker(i, skills);
+    const data = makeWorker(i, metadata);
     workers.push(data);
   }
   return workers;
@@ -90,45 +96,45 @@ function genSkills(topics) {
 
 function getTopics(properties) {
   const prop = getProperty(properties, 'topic');
-  return prop.values;
+  return prop.enum;
 }
 
 function getChannels(properties) {
   const prop = getProperty(properties, 'channel');
-  return prop.values;
+  return prop.enum;
 }
 
 function getActivities(properties) {
   const prop = getProperty(properties, 'activity');
-  return prop.values;
+  return prop.enum;
 }
 
-const makeWorker = (i, skills) => {
+const makeWorker = (i, metadata) => {
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
   const full_name = faker.person.fullName();
-  const skill = getRandomSkill(skills);
-  const attributes = { skill, data: 'flexsim', contact_uri: `client:${friendlyName}`, full_name };
+  const { properties, workerAttributes } = metadata;
+  const customAttrs = calcCustomAttrs(properties, workerAttributes);
+  const attributes = {
+    data: 'flexsim',
+    contact_uri: `client:${friendlyName}`,
+    full_name,
+    ...customAttrs
+  };
   return { friendlyName, attributes };
 };
-
-function getRandomSkill(skills) {
-  const idx = getRandomInt(skills.length);
-  const skill = skills[idx];
-  return skill;
-}
-
-function getRandomInt(max) {
-  return Math.floor(Math.random() * max);
-}
 
 function getProperty(properties, name) {
   return properties.find(prop => prop.name === name)
 }
 
 async function writeCfgToCfgdir(cfgdir, cfg) {
-  const { activities, channels, queues, workers, workflow, simulation } = cfg;
+  const {
+    activities, channels, metadata, queues, workers, workflow, simulation
+  } = cfg;
   let path;
+  path = `${cfgdir}/metadata.json`;
+  await writeToJsonFile(path, metadata);
   path = `${cfgdir}/activities.json`;
   await writeToJsonFile(path, activities);
   path = `${cfgdir}/channels.json`;

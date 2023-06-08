@@ -13,7 +13,10 @@ async function run() {
   console.log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
-  console.log(`read workflow: ${context.workflow.friendlyName}`);
+  if (context.workflow)
+    console.log(`read workflow: ${context.workflow.friendlyName}`);
+  else
+    console.log(`cannot read workflow???`);
   await removeTasks(context);
 }
 

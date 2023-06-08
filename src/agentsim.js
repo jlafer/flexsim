@@ -5,7 +5,7 @@ const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { fetchActivities } = require('./helpers/activity');
-const { changeActivity, fetchFlexsimWorkers } = require('./helpers/worker');
+const { changeActivity, fetchFlexsimWorkers, fetchWorker } = require('./helpers/worker');
 const { findObjInList } = require('./helpers/util');
 const { completeTask } = require('./helpers/task');
 
@@ -41,6 +41,12 @@ async function init() {
       },
       (simulation.handleTimeBase * 1000)
     );
+    setTimeout(
+      function () {
+        changeWorkerActivity(context, WorkerSid);
+      },
+      (45000)
+    );
     res.send({ instruction: 'accept' });
   })
 
@@ -50,6 +56,21 @@ async function init() {
 }
 
 init();
+
+async function changeWorkerActivity(context, WorkerSid) {
+  const { activities } = context;
+  const availableAct = findObjInList('friendlyName', 'Available', activities);
+  const busyAct = findObjInList('friendlyName', 'Busy', activities);
+  const worker = await fetchWorker(context, WorkerSid);
+  const { sid, friendlyName, activityName } = worker;
+  const newActivity = (activityName === 'Available') ? busyAct : availableAct;
+  console.log(`${friendlyName} changing state from ${activityName} to ${newActivity.friendlyName}`);
+  try {
+    changeActivity(context, sid, newActivity.sid);
+  }
+  catch (err) { }
+  setTimeout(changeWorkerActivity, 45000, context, WorkerSid);
+}
 
 async function loginAllWorkers(context) {
   const { workers, activities } = context;

@@ -2,6 +2,14 @@ const R = require('ramda');
 
 const { findObjInList, hasAttributeValue } = require('./util');
 
+const fetchWorker = async (ctx, sid) => {
+  const { args, client, workers } = ctx;
+  const rawWorker = await client.taskrouter.v1.workspaces(args.wrkspc).workers(sid).fetch();
+  const worker = pickKeyProps(rawWorker);
+  ctx.workers = workers.map(w => (w.sid === sid) ? worker : w);
+  return worker;
+};
+
 const fetchWorkers = async (ctx) => {
   const { args, client } = ctx;
   const allWorkers = await client.taskrouter.v1.workspaces(args.wrkspc).workers.list();
@@ -63,5 +71,6 @@ module.exports = {
   createWorkers,
   fetchFlexsimWorkers,
   fetchWorkers,
+  fetchWorker,
   removeWorkers
 }

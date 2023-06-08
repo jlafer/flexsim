@@ -4,6 +4,10 @@ const findObjInList = R.curry((key, val, arr) =>
   R.find(R.propEq(val, key), arr)
 );
 
+const filterObjInList = R.curry((key, val, arr) =>
+  R.filter(R.propEq(val, key), arr)
+);
+
 const hasAttributeValue = R.curry((key, val, obj) => R.propEq(val, key, obj.attributes));
 
 const delay = (mSec) => {
@@ -21,6 +25,7 @@ const delay = (mSec) => {
 
 module.exports = {
   delay,
+  filterObjInList,
   findObjInList,
   hasAttributeValue
 }

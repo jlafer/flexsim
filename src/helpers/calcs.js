@@ -8,6 +8,12 @@ function calcCustomAttrs(properties, attributes) {
   return customAttrs;
 }
 
+function calcCustomAttribute(properties, attributes, attrName) {
+  const attribute = findObjInList('name', attrName, attributes);
+  const kvPair = calcValueToProp(properties, attribute);
+  return kvPair[attrName];
+}
+
 const calcValueToProp = R.curry((properties, attribute) => {
   const { name, property, mapping } = attribute;
   const randNum = Math.random();
@@ -28,5 +34,6 @@ const calcValueToProp = R.curry((properties, attribute) => {
 });
 
 module.exports = {
-  calcCustomAttrs
+  calcCustomAttrs,
+  calcCustomAttribute
 }

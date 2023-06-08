@@ -1,4 +1,5 @@
 {
+  "arrivalRate": 10,
   "workerAttributes": [
     {
       "name": "lang",
@@ -19,36 +20,36 @@
       ]
     }
   ],
-  "taskAttributes": {
-    "arrival": [
-      {
-        "name": "channel",
-        "mapping": [
-          0.5,
-          0.3,
-          0.2
-        ]
-      },
-      {
-        "name": "topic",
-        "mapping": [
-          0.20,
-          0.20,
-          0.35,
-          0.25
-        ]
-      },
-      {
-        "name": "intent",
-        "mapping": [
-          0.20,
-          0.20,
-          0.35,
-          0.25
-        ]
-      }
-    ]
-  },
+  "taskAttributes": [
+    {
+      "name": "channel",
+      "mapping": [
+        0.5,
+        0.3,
+        0.2
+      ]
+    },
+    {
+      "name": "topic",
+      "phase": "arrival",
+      "mapping": [
+        0.20,
+        0.20,
+        0.35,
+        0.25
+      ]
+    },
+    {
+      "name": "intent",
+      "phase": "arrival",
+      "mapping": [
+        0.20,
+        0.20,
+        0.35,
+        0.25
+      ]
+    }
+  ],
   "properties": [
     {
       "name": "topic",
@@ -65,7 +66,7 @@
       "expr": "enum",
       "enum": [
         "voice",
-        "webchat",
+        "chat",
         "sms"
       ]
     },

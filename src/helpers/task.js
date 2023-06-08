@@ -1,8 +1,8 @@
 const { faker } = require('@faker-js/faker');
 const R = require('ramda');
 
-const { calcCustomAttrs } = require('./calcs');
-const { findObjInList, hasAttributeValue } = require('./util');
+const { calcCustomAttrs, calcCustomAttribute } = require('./calcs');
+const { filterObjInList, findObjInList, hasAttributeValue } = require('./util');
 
 const fetchTasks = async (ctx) => {
   const { args, client } = ctx;
@@ -20,16 +20,16 @@ const fetchFlexsimTasks = async (ctx) => {
 const submitTask = async (ctx) => {
   const { args, cfg, client, workflow, channels } = ctx;
   const { metadata } = cfg;
-  const chat = findObjInList('uniqueName', 'chat', channels);
-  const sms = findObjInList('uniqueName', 'sms', channels);
-  const voice = findObjInList('uniqueName', 'voice', channels);
-  const name = faker.person.fullName();
   const { properties, taskAttributes } = metadata;
-  const customAttrs = calcCustomAttrs(properties, taskAttributes.arrival);
+  const channelName = calcCustomAttribute(properties, taskAttributes, 'channel');
+  const taskChannel = findObjInList('uniqueName', channelName, channels);
+  const arrivalAttributes = filterObjInList('phase', 'arrival', taskAttributes);
+  const customAttrs = calcCustomAttrs(properties, arrivalAttributes);
+  const name = faker.person.fullName();
   const task = await client.taskrouter.v1.workspaces(args.wrkspc).tasks
     .create(
       {
-        taskChannel: voice.sid,
+        taskChannel: taskChannel.sid,
         attributes: JSON.stringify({
           source: 'flexsim',
           name,

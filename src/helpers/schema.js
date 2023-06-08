@@ -8,26 +8,25 @@ const schema = {
     brand: { type: 'string', default: 'Owl Industries' },
     handleTimeBase: { type: 'number', default: 30 },
     taskAttributes: {
-      type: 'object',
-      properties: {
-        arrival: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              property: { type: 'string' },
-              mapping: {
-                type: 'array',
-                items: {
-                  type: 'number'
-                }
-              }
-            },
-            required: ['name']
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          property: { type: 'string' },
+          phase: {
+            type: 'string',
+            enum: ['arrival', 'routing', 'completion']
+          },
+          mapping: {
+            type: 'array',
+            items: {
+              type: 'number'
+            }
           }
-        }
-      },
+        },
+        required: ['name']
+      }
     },
     workerAttributes: {
       type: 'array',

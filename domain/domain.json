@@ -1,5 +1,28 @@
 {
   "arrivalRate": 10,
+  "enum": [],
+  "activities": [
+    {
+      "name": "Available",
+      "baseDur": 90,
+      "portion": 0.25
+    },
+    {
+      "name": "Busy",
+      "baseDur": 15,
+      "portion": 0.15
+    },
+    {
+      "name": "Break",
+      "baseDur": 30,
+      "portion": 0.35
+    },
+    {
+      "name": "Lunch",
+      "baseDur": 120,
+      "portion": 0.25
+    }
+  ],
   "workerAttributes": [
     {
       "name": "lang",
@@ -68,17 +91,6 @@
         "voice",
         "chat",
         "sms"
-      ]
-    },
-    {
-      "name": "activity",
-      "expr": "enum",
-      "enum": [
-        "Offline",
-        "Available",
-        "Busy",
-        "Break",
-        "Lunch"
       ]
     },
     {

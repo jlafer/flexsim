@@ -1,13 +1,16 @@
 require("dotenv").config();
 const express = require('express');
 
+const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
+const { calcActivityChange } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
-const { fetchActivities } = require('./helpers/activity');
-const { changeActivity, fetchFlexsimWorkers, fetchWorker } = require('./helpers/worker');
-const { findObjInList } = require('./helpers/util');
 const { completeTask } = require('./helpers/task');
+const { findObjInList } = require('./helpers/util');
+const {
+  changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
+} = require('./helpers/worker');
 
 async function init() {
   const args = getArgs();
@@ -29,9 +32,11 @@ async function init() {
     const { TaskSid, ReservationSid, WorkerSid } = req.body;
     const { cfg } = context;
     const { simulation } = cfg;
+    const worker = getWorker(context, WorkerSid);
+    const { sid, friendlyName } = worker;
     const now = new Date();
     console.log(now);
-    console.log(`  reservation ${ReservationSid} for task ${TaskSid} assigned to worker ${WorkerSid}`);
+    console.log(`  ${friendlyName} reserved for task ${TaskSid}`);
     setTimeout(
       function () {
         const now = new Date();
@@ -41,11 +46,13 @@ async function init() {
       },
       (simulation.handleTimeBase * 1000)
     );
+    const activityChange = calcActivityChange(context, worker);
+    const [activityName, delayMsec] = activityChange;
     setTimeout(
       function () {
-        changeWorkerActivity(context, WorkerSid);
+        changeActivityAndWait(context, sid, activityName);
       },
-      (45000)
+      delayMsec
     );
     res.send({ instruction: 'accept' });
   })
@@ -57,19 +64,29 @@ async function init() {
 
 init();
 
-async function changeWorkerActivity(context, WorkerSid) {
-  const { activities } = context;
-  const availableAct = findObjInList('friendlyName', 'Available', activities);
-  const busyAct = findObjInList('friendlyName', 'Busy', activities);
+async function changeActivityAndWait(context, WorkerSid, activityName) {
   const worker = await fetchWorker(context, WorkerSid);
-  const { sid, friendlyName, activityName } = worker;
-  const newActivity = (activityName === 'Available') ? busyAct : availableAct;
-  console.log(`${friendlyName} changing state from ${activityName} to ${newActivity.friendlyName}`);
+  const { sid, friendlyName, activityName: currActivityName } = worker;
+
+  const { activities } = context;
+  const activity = findObjInList('friendlyName', activityName, activities);
+  const availableAct = findObjInList('friendlyName', 'Available', activities);
+
+  const activitySid = (currActivityName === 'Available')
+    ? activity.sid
+    : availableAct.sid;
+  const actualName = (currActivityName === 'Available')
+    ? activityName
+    : availableAct.friendlyName;
+  console.log(`${friendlyName} changing state from ${currActivityName} to ${actualName}`);
   try {
-    changeActivity(context, sid, newActivity.sid);
+    changeActivity(context, sid, activitySid);
   }
   catch (err) { }
-  setTimeout(changeWorkerActivity, 45000, context, WorkerSid);
+
+  const activityChange = calcActivityChange(context, worker);
+  const [nextActivityName, delayMsec] = activityChange;
+  setTimeout(changeActivityAndWait, delayMsec, context, WorkerSid, nextActivityName);
 }
 
 async function loginAllWorkers(context) {
@@ -77,8 +94,9 @@ async function loginAllWorkers(context) {
   const availableAct = findObjInList('friendlyName', 'Available', activities);
   for (let i = 0; i < workers.length; i++) {
     const worker = workers[i];
-    console.log(`signing in ${worker.friendlyName}`);
-    await changeActivity(context, worker.sid, availableAct.sid);
+    const { sid, friendlyName, attributes } = worker;
+    console.log(`signing in ${friendlyName} [${attributes.full_name}]`);
+    await changeActivity(context, sid, availableAct.sid);
   }
 }
 
@@ -86,14 +104,6 @@ async function loadTwilioResources(context) {
   context.activities = await fetchActivities(context);
   context.workers = await fetchFlexsimWorkers(context);
 }
-
-const advanceTheAgent = (i, idx) => {
-  const limit = 5;
-  console.log(`advanceTheAgent ${i} to ${idx} at ${(Date.now() / 1000)}`);
-  if (idx < limit) {
-    setTimeout(advanceTheAgent, (i * 3000 + 5000), i, idx + 1);
-  }
-};
 
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
@@ -121,7 +131,8 @@ function getArgs() {
 
 async function readConfiguration(args) {
   const { cfgdir } = args;
+  const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   const simulation = await readJsonFile(`${cfgdir}/simulation.json`);
   const workers = await readJsonFile(`${cfgdir}/workers.json`);
-  return { simulation, workers };
+  return { metadata, simulation, workers };
 }

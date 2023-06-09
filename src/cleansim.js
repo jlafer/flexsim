@@ -1,10 +1,11 @@
 require("dotenv").config();
 
+const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { removeTasks } = require('./helpers/task');
-const { changeActivity, fetchFlexsimWorkers } = require('./helpers/worker');
+const { changeActivity, fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
 const { fetchWorkflow } = require('./helpers/workflow');
 
 async function run() {
@@ -18,6 +19,9 @@ async function run() {
   else
     console.log(`cannot read workflow???`);
   await removeTasks(context);
+  if (args.dletWorkers) {
+    await removeWorkers(context);
+  }
 }
 
 run();
@@ -25,6 +29,9 @@ run();
 async function loadTwilioResources(context) {
   context.workflow = await fetchWorkflow(context);
   context.workers = await fetchFlexsimWorkers(context);
+  if (context.args.dletWorkers) {
+    context.activities = await fetchActivities(context);
+  }
 }
 
 const initializeContext = (cfg, args) => {
@@ -34,7 +41,7 @@ const initializeContext = (cfg, args) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', W: 'dletWorkers' },
     required: []
   });
   const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID } = process.env;
@@ -42,10 +49,12 @@ function getArgs() {
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
-  const { acct, wrkspc, cfgdir } = args;
+  args.dletWorkers = args.dletWorkers || false;
+  const { acct, wrkspc, cfgdir, dletWorkers } = args;
   console.log('acct:', acct);
   console.log('wrkspc:', wrkspc);
   console.log('cfgdir:', cfgdir);
+  console.log('dletWorkers:', dletWorkers);
   return args;
 }
 

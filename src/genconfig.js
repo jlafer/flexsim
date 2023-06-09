@@ -29,14 +29,13 @@ function genConfiguration(context) {
   const { agentCnt, properties } = domain;
   const cfg = {};
   cfg.metadata = R.pick(
-    ['properties', 'taskAttributes', 'workerAttributes'],
+    ['activities', 'properties', 'taskAttributes', 'workerAttributes'],
     domain
   );
   cfg.simulation = R.pick(['arrivalRate', 'brand', 'handleTimeBase'], domain);
   cfg.topics = getTopics(properties);
   cfg.skills = genSkills(cfg.topics);
   cfg.channels = getChannels(properties);
-  cfg.activities = getActivities(properties);
   cfg.workers = genWorkers(agentCnt, cfg.metadata);
   cfg.queues = cfg.topics.map(topicToQueue(cfg.skills));
   cfg.workflow = genWorkflow(cfg);
@@ -104,11 +103,6 @@ function getChannels(properties) {
   return prop.enum;
 }
 
-function getActivities(properties) {
-  const prop = getProperty(properties, 'activity');
-  return prop.enum;
-}
-
 const makeWorker = (i, metadata) => {
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
@@ -130,13 +124,11 @@ function getProperty(properties, name) {
 
 async function writeCfgToCfgdir(cfgdir, cfg) {
   const {
-    activities, channels, metadata, queues, workers, workflow, simulation
+    channels, metadata, queues, workers, workflow, simulation
   } = cfg;
   let path;
   path = `${cfgdir}/metadata.json`;
   await writeToJsonFile(path, metadata);
-  path = `${cfgdir}/activities.json`;
-  await writeToJsonFile(path, activities);
   path = `${cfgdir}/channels.json`;
   await writeToJsonFile(path, channels);
   path = `${cfgdir}/workflow.json`;

@@ -14,8 +14,33 @@ function calcCustomAttribute(properties, attributes, attrName) {
   return kvPair[attrName];
 }
 
+function calcActivityChange(ctx, worker) {
+  const { cfg } = ctx;
+  const { metadata } = cfg;
+  const { activities } = metadata;
+
+  const mapping = activities.map(R.prop('portion'));
+  const idx = getMappingIndexUniform(mapping);
+  const activity = activities[idx];
+
+  const currActivityName = worker.activityName;
+  const currActivity = findObjInList('name', currActivityName, activities);
+  const delayMsec = currActivity.baseDur * 1000;
+
+  return [activity.name, delayMsec];
+}
+
 const calcValueToProp = R.curry((properties, attribute) => {
   const { name, property, mapping } = attribute;
+  const propName = property || name;
+  const prop = findObjInList('name', propName, properties);
+  const { enum: values } = prop;
+  const idx = getMappingIndexUniform(mapping);
+  const val = values[idx];
+  return { [name]: val };
+});
+
+function getMappingIndexUniform(mapping) {
   const randNum = Math.random();
   let upper = 0.0;
   let idx;
@@ -26,14 +51,10 @@ const calcValueToProp = R.curry((properties, attribute) => {
       break;
     }
   }
-  const propName = property || name;
-  const prop = findObjInList('name', propName, properties);
-  const { enum: values } = prop;
-  const val = values[idx];
-  return { [name]: val };
-});
-
+  return idx;
+}
 module.exports = {
+  calcActivityChange,
   calcCustomAttrs,
   calcCustomAttribute
 }

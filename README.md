@@ -39,10 +39,10 @@ The scripts that use a Twilio project can use the following environment variable
 - AUTH_TOKEN
 - WRKSPC_SID
 
-The `agentsim` script also uses a variable to specify the HTTP listening port.
-- PORT
+The `agentsim` script also accepts a variable to specify the HTTP listening port.
+- AGENTSIM_PORT
 
-A `.env` file placed in the project root folder can be used to supply those variables to all scripts. See `.env.sample` for a template.
+An `.env` file placed in the project root folder can be used to supply those variables to all scripts. See `.env.sample` for a template.
 
 ### Preparing a Flex Project for flexsim
 The simulation builds and deploys a TR Workflow that uses the configured Task attributes, routing criteria and Worker attributes to select and reserve the `flexsim` agents. When a reservation is made, Twilio calls the Workflow-specified assignment callback URL, in order to let the `agentsim` program know that an agent has been assigned a task and that it should now start "handling" the task. That URL can be configured by the user and must reference the host and port of the `agentsim` script, which must be publicly accessible. On a development machine, this can be done using a tunnel service like `ngrok`.
@@ -81,10 +81,11 @@ It supports a single URL path:
 
 To start the `agentsim` script:
 ```
-node ./src/agentsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx]
+node ./src/agentsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--port num]
 ```
 The optional command-line options include:
 - `cfgdir` specifies the directory where the configuration files to be read are located
+- `port` specifies the HTTP port on which the program listens for callbacks from TaskRouter; if not specified here or in the environment, the default is 3000
 
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
  

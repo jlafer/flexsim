@@ -3,7 +3,7 @@ const express = require('express');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
-const { calcActivityChange } = require('./helpers/calcs');
+const { calcActivityChange, calcValue } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { completeTask } = require('./helpers/task');
@@ -21,7 +21,6 @@ async function init() {
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  const port = 3000;
 
   app.get('/', (req, res) => {
     console.log(`agentsim said hello`);
@@ -29,7 +28,7 @@ async function init() {
   })
 
   app.post('/reservation', (req, res) => {
-    const { TaskSid, ReservationSid, WorkerSid } = req.body;
+    const { TaskSid, WorkerSid } = req.body;
     const { cfg } = context;
     const { simulation } = cfg;
     const worker = getWorker(context, WorkerSid);
@@ -37,6 +36,7 @@ async function init() {
     const now = Date.now();
     console.log(formatDt(now));
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
+    const talkTime = calcValue(simulation.talkTime)
     setTimeout(
       function () {
         const now = Date.now();
@@ -44,8 +44,26 @@ async function init() {
         console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
         completeTask(context, TaskSid);
       },
-      (simulation.handleTimeBase * 1000)
+      (talkTime * 1000)
     );
+    res.send({ instruction: 'accept' });
+  })
+
+  app.listen(args.port, () => {
+    console.log(`agentsim listening on port ${args.port}`)
+  });
+}
+
+init();
+
+async function loginAllWorkers(context) {
+  const { workers, activities } = context;
+  const availableAct = findObjInList('friendlyName', 'Available', activities);
+  for (let i = 0; i < workers.length; i++) {
+    const worker = workers[i];
+    const { sid, friendlyName, attributes } = worker;
+    console.log(`${friendlyName} [${attributes.full_name}] signing in`);
+    await changeActivity(context, sid, availableAct.sid);
     const activityChange = calcActivityChange(context, worker);
     const [activityName, delayMsec] = activityChange;
     setTimeout(
@@ -54,15 +72,8 @@ async function init() {
       },
       delayMsec
     );
-    res.send({ instruction: 'accept' });
-  })
-
-  app.listen(port, () => {
-    console.log(`agentsim listening on port ${port}`)
-  });
+  }
 }
-
-init();
 
 async function changeActivityAndWait(context, WorkerSid, activityName) {
   const now = Date.now();
@@ -91,17 +102,6 @@ async function changeActivityAndWait(context, WorkerSid, activityName) {
   setTimeout(changeActivityAndWait, delayMsec, context, WorkerSid, nextActivityName);
 }
 
-async function loginAllWorkers(context) {
-  const { workers, activities } = context;
-  const availableAct = findObjInList('friendlyName', 'Available', activities);
-  for (let i = 0; i < workers.length; i++) {
-    const worker = workers[i];
-    const { sid, friendlyName, attributes } = worker;
-    console.log(`${friendlyName} [${attributes.full_name}] signing in`);
-    await changeActivity(context, sid, availableAct.sid);
-  }
-}
-
 async function loadTwilioResources(context) {
   context.activities = await fetchActivities(context);
   context.workers = await fetchFlexsimWorkers(context);
@@ -114,19 +114,21 @@ const initializeContext = (cfg, args) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', p: 'port' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_PORT } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
+  args.port = args.port || AGENTSIM_PORT || 3000;
   args.cfgdir = args.cfgdir || 'config';
   args.timeLim = args.timeLim || 3600;
-  const { acct, wrkspc, cfgdir, timeLim } = args;
+  const { acct, wrkspc, cfgdir, port, timeLim } = args;
   console.log('acct:', acct);
   console.log('wrkspc:', wrkspc);
   console.log('cfgdir:', cfgdir);
+  console.log('port:', port);
   console.log('timeLim:', timeLim);
   return args;
 }

@@ -21,8 +21,24 @@ const schema = {
         max: { type: 'number', default: 20 }
       }
     },
+    talkTime: {
+      type: 'object',
+      properties: {
+        expr: {
+          type: 'string',
+          enum: ['enum', 'range', 'identity'],
+          default: 'enum'
+        },
+        curve: {
+          type: 'string',
+          enum: ['uniform', 'bell'],
+          default: 'uniform'
+        },
+        min: { type: 'number', default: 10 },
+        max: { type: 'number', default: 40 }
+      }
+    },
     brand: { type: 'string', default: 'Owl Industries' },
-    handleTimeBase: { type: 'number', default: 30 },
     taskAttributes: {
       type: 'array',
       items: {

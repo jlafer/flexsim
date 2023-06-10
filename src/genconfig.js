@@ -32,7 +32,7 @@ function genConfiguration(context) {
     ['activities', 'properties', 'taskAttributes', 'workerAttributes'],
     domain
   );
-  cfg.simulation = R.pick(['arrivalGap', 'brand', 'handleTimeBase'], domain);
+  cfg.simulation = R.pick(['arrivalGap', 'brand', 'talkTime'], domain);
   cfg.topics = getTopics(properties);
   cfg.skills = genSkills(cfg.topics);
   cfg.channels = getChannels(properties);

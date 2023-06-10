@@ -12,12 +12,12 @@ async function run() {
   const { cfgdir } = args;
   const domain = await readDomainData(args);
   // NOTE: checkAndFillDomain mutates 'domain'
-  const [valid, errors] = checkAndFillDomain(domain);
+  const [valid, result] = checkAndFillDomain(domain);
   if (!valid) {
-    console.error('domain.json validation errors:', errors);
+    console.error('domain.json validation errors:', result);
     throw new Error('validation of domain.json failed');
   }
-  const context = { args, domain };
+  const context = { args, domain: result };
   const cfg = genConfiguration(context);
   await writeCfgToCfgdir(cfgdir, cfg);
 }

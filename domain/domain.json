@@ -2,13 +2,11 @@
   "arrivalGap": {
     "expr": "range",
     "curve": "uniform",
-    "min": 5,
     "max": 15
   },
   "talkTime": {
     "expr": "range",
     "curve": "bell",
-    "min": 15,
     "max": 45
   },
   "activities": [

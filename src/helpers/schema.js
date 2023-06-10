@@ -1,43 +1,13 @@
 const Ajv = require('ajv');
+const R = require('ramda');
 
 const schema = {
+  $id: "http://twilio.com/schemas/flexsim/domain.json",
   type: 'object',
   properties: {
     agentCnt: { type: 'number', default: 15 },
-    arrivalGap: {
-      type: 'object',
-      properties: {
-        expr: {
-          type: 'string',
-          enum: ['enum', 'range', 'identity'],
-          default: 'enum'
-        },
-        curve: {
-          type: 'string',
-          enum: ['uniform', 'bell'],
-          default: 'uniform'
-        },
-        min: { type: 'number', default: 10 },
-        max: { type: 'number', default: 20 }
-      }
-    },
-    talkTime: {
-      type: 'object',
-      properties: {
-        expr: {
-          type: 'string',
-          enum: ['enum', 'range', 'identity'],
-          default: 'enum'
-        },
-        curve: {
-          type: 'string',
-          enum: ['uniform', 'bell'],
-          default: 'uniform'
-        },
-        min: { type: 'number', default: 10 },
-        max: { type: 'number', default: 40 }
-      }
-    },
+    arrivalGap: { $ref: "valueDefn.json#/definitions/valueDefn" },
+    talkTime: { $ref: "valueDefn.json#/definitions/valueDefn" },
     brand: { type: 'string', default: 'Owl Industries' },
     taskAttributes: {
       type: 'array',
@@ -105,11 +75,63 @@ const schema = {
   additionalProperties: true
 };
 
+const valueDefnSchema = {
+  $id: "http://twilio.com/schemas/flexsim/valueDefn.json",
+  definitions: {
+    valueDefn: {
+      type: 'object',
+      properties: {
+        expr: {
+          type: 'string',
+          enum: ['enum', 'range', 'identity'],
+          default: 'enum'
+        },
+        curve: {
+          type: 'string',
+          enum: ['uniform', 'bell'],
+          default: 'uniform'
+        },
+        min: { type: 'number' },
+        max: { type: 'number' }
+      }
+    }
+  }
+};
+
 const checkAndFillDomain = (domain) => {
   const ajv = new Ajv({ useDefaults: true });
-  const validate = ajv.compile(schema);
+  const validate = ajv.addSchema(valueDefnSchema).compile(schema);
+  // NOTE: ajv mutates domain by filling default values
   const valid = validate(domain);
-  return [valid, validate.errors];
+  if (!valid)
+    return [valid, validate.errors];
+
+  let res;
+  // supply defaults for elements using referenced subschemas; ajv "default" keyword not usable with these
+  res = setDefaultProp(domain, ['arrivalGap', 'min'], 3);
+  res = setDefaultProp(res, ['arrivalGap', 'max'], 20);
+  res = setDefaultProp(res, ['talkTime', 'min'], 10);
+  res = setDefaultProp(res, ['talkTime', 'max'], 50);
+
+  return [true, res];
+}
+
+function setDefaultProp(domain, path, value) {
+  const patch = makeDeepProp(path, value);
+  const filled = R.mergeDeepLeft(domain, patch);
+  return filled;
+}
+
+function makeDeepProp(path, value) {
+  const deepProp = R.reduceRight(
+    (pathElem, accum) => {
+      const res = { [pathElem]: accum };
+      return res;
+    },
+    value,
+    path
+  );
+  return deepProp;
 }
 
 module.exports = {

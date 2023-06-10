@@ -30,6 +30,30 @@ function calcActivityChange(ctx, worker) {
   return [activity.name, delayMsec];
 }
 
+const calcValue = (valueDescr) => {
+  const { expr } = valueDescr;
+  const value = (expr === 'range')
+    ? calcRangeValue(valueDescr)
+    : calcIdentityValue(valueDescr);
+  return value;
+}
+
+const calcRangeValue = (valueDescr) => {
+  const randNum = calcIdentityValue(valueDescr);
+  const { min, max } = valueDescr;
+  const size = max - min;
+  const value = (randNum * size) + min;
+  return value;
+};
+
+const calcIdentityValue = (valueDescr) => {
+  const { curve } = valueDescr;
+  const value = (curve == 'uniform')
+    ? Math.random()
+    : (Math.random() + Math.random()) / 2;
+  return value;
+};
+
 const calcValueToProp = R.curry((properties, attribute) => {
   const { name, property, mapping } = attribute;
   const propName = property || name;
@@ -56,5 +80,7 @@ function getMappingIndexUniform(mapping) {
 module.exports = {
   calcActivityChange,
   calcCustomAttrs,
-  calcCustomAttribute
+  calcCustomAttribute,
+  calcRangeValue,
+  calcValue
 }

@@ -23,9 +23,20 @@ const delay = (mSec) => {
   );
 };
 
+function formatDt(tsMsec) {
+  const dt = new Date(tsMsec);
+  return dt.toLocaleTimeString();
+}
+
+function formatSid(sid) {
+  return `${sid.slice(0, 2)}...${sid.slice(-4)}`
+}
+
 module.exports = {
   delay,
   filterObjInList,
   findObjInList,
+  formatDt,
+  formatSid,
   hasAttributeValue
 }

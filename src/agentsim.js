@@ -7,7 +7,7 @@ const { calcActivityChange } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { completeTask } = require('./helpers/task');
-const { findObjInList } = require('./helpers/util');
+const { findObjInList, formatDt, formatSid } = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -34,14 +34,14 @@ async function init() {
     const { simulation } = cfg;
     const worker = getWorker(context, WorkerSid);
     const { sid, friendlyName } = worker;
-    const now = new Date();
-    console.log(now);
-    console.log(`  ${friendlyName} reserved for task ${TaskSid}`);
+    const now = Date.now();
+    console.log(formatDt(now));
+    console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
     setTimeout(
       function () {
-        const now = new Date();
-        console.log(now);
-        console.log(`  completing task ${TaskSid} assigned to worker ${WorkerSid}`);
+        const now = Date.now();
+        console.log(formatDt(now));
+        console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
         completeTask(context, TaskSid);
       },
       (simulation.handleTimeBase * 1000)
@@ -65,6 +65,7 @@ async function init() {
 init();
 
 async function changeActivityAndWait(context, WorkerSid, activityName) {
+  const now = Date.now();
   const worker = await fetchWorker(context, WorkerSid);
   const { sid, friendlyName, activityName: currActivityName } = worker;
 
@@ -78,9 +79,10 @@ async function changeActivityAndWait(context, WorkerSid, activityName) {
   const actualName = (currActivityName === 'Available')
     ? activityName
     : availableAct.friendlyName;
-  console.log(`${friendlyName} changing state from ${currActivityName} to ${actualName}`);
+  console.log(formatDt(now));
+  console.log(`  ${friendlyName} changing from ${currActivityName} to ${actualName}`);
   try {
-    changeActivity(context, sid, activitySid);
+    await changeActivity(context, sid, activitySid);
   }
   catch (err) { }
 
@@ -95,7 +97,7 @@ async function loginAllWorkers(context) {
   for (let i = 0; i < workers.length; i++) {
     const worker = workers[i];
     const { sid, friendlyName, attributes } = worker;
-    console.log(`signing in ${friendlyName} [${attributes.full_name}]`);
+    console.log(`${friendlyName} [${attributes.full_name}] signing in`);
     await changeActivity(context, sid, availableAct.sid);
   }
 }

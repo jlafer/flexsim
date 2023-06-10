@@ -56,14 +56,17 @@ async function removeWorkers(ctx) {
   }
 }
 
-const changeActivity = (ctx, sid, activitySid) => {
+const changeActivity = async (ctx, sid, activitySid) => {
   const { args, client } = ctx;
-  return client.taskrouter.v1.workspaces(args.wrkspc).workers(sid).update({
-    activitySid
-  })
-    .then(worker => {
-      return worker;
-    })
+  try {
+    const worker = await client.taskrouter.v1.workspaces(args.wrkspc).workers(sid).update({
+      activitySid
+    });
+    return worker;  
+  }
+  catch (err) {
+    return null;
+  }
 };
 
 function pickKeyProps(worker) {

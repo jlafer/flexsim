@@ -1,6 +1,10 @@
 {
-  "arrivalRate": 10,
-  "enum": [],
+  "arrivalGap": {
+    "expr": "range",
+    "curve": "uniform",
+    "min": 5,
+    "max": 15
+  },
   "activities": [
     {
       "name": "Available",

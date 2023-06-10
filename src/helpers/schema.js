@@ -4,7 +4,23 @@ const schema = {
   type: 'object',
   properties: {
     agentCnt: { type: 'number', default: 15 },
-    arrivalRate: { type: 'number', default: 3 },
+    arrivalGap: {
+      type: 'object',
+      properties: {
+        expr: {
+          type: 'string',
+          enum: ['enum', 'range', 'identity'],
+          default: 'enum'
+        },
+        curve: {
+          type: 'string',
+          enum: ['uniform', 'bell'],
+          default: 'uniform'
+        },
+        min: { type: 'number', default: 10 },
+        max: { type: 'number', default: 20 }
+      }
+    },
     brand: { type: 'string', default: 'Owl Industries' },
     handleTimeBase: { type: 'number', default: 30 },
     taskAttributes: {

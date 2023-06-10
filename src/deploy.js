@@ -41,18 +41,20 @@ async function deployNewInfra(context) {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', u: 'assignURL' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, ASSIGN_URL } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
-  const { acct, wrkspc, cfgdir } = args;
+  args.assignURL = args.assignURL || ASSIGN_URL;
+  const { acct, wrkspc, cfgdir, assignURL } = args;
   console.log('acct:', acct);
   console.log('wrkspc:', wrkspc);
   console.log('cfgdir:', cfgdir);
+  console.log('assignURL:', assignURL);
   return args;
 }
 

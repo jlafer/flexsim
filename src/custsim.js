@@ -1,11 +1,12 @@
 require("dotenv").config();
 
 const {parseAndValidateArgs} = require('./helpers/args');
+const { calcValue } = require('./helpers/calcs');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const {submitTask} = require('./helpers/task');
-const { delay } = require('./helpers/util');
+const { delay, formatDt, formatSid } = require('./helpers/util');
 const { fetchWorkflow } = require('./helpers/workflow');
 
 async function run() {
@@ -19,12 +20,13 @@ async function run() {
   while (now < context.simStopTS) {
     const task = await submitTask(context);
     //report = addTaskToReport(task)
-    console.log(`new task ${task.sid} at`, now);
-    await delay(context.arrivallDelayBase);
+    console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
+    const delayMsec = calcValue(cfg.simulation.arrivalGap) * 1000
+    await delay(delayMsec);
     now = Date.now();
   }
   //reportWorkload(report)
-  console.log('custsim finished at', now);
+  console.log('custsim finished at', formatDt(now));
 }
 
 run();
@@ -37,7 +39,7 @@ async function loadTwilioResources(context) {
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
   context.simStopTS = context.simStartTS + (args.timeLim * 1000);
-  context.arrivallDelayBase = Math.floor(60 / cfg.simulation.arrivalRate) * 1000;
+  //context.arrivallDelayBase = Math.floor(60 / cfg.simulation.arrivalGap) * 1000;
   return context;
 }
 

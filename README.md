@@ -62,10 +62,11 @@ The optional command-line options include:
 ### deploy
 To start the `deploy` script:
 ```
-node ./src/deploy [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx]
+node ./src/deploy [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--assignURL url]
 ```
 The optional command-line options include:
 - `cfgdir` specifies the directory where the configuration files to be read are located
+- `assignURL` specifies the ssignment callback URL to be written into the generated Workflow; this should refer to the `agentsim` host and port
 
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 

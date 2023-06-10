@@ -16,10 +16,9 @@ const fetchWorkflow = async (ctx) => {
 
 const createWorkflow = async (ctx) => {
   const { args, cfg, client, queues } = ctx;
-  const { wrkspc } = args;
+  const { wrkspc, assignURL: assignmentCallbackUrl } = args;
   const { workflow: cfgWorkflow } = cfg;
   const { friendlyName, configuration } = cfgWorkflow;
-  const assignmentCallbackUrl = `https://jlafer-demo.ngrok.io/reservation`;
   const filters = configuration.task_routing.filters.map(queueFriendlyNameToSid(queues));
   const everyoneQueue = findObjInList('friendlyName', 'Everyone', queues);
   const newConfiguration = {

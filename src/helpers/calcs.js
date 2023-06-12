@@ -1,71 +1,70 @@
 const R = require('ramda');
 
-const { findObjInList } = require('./util');
+const { getSingleProp } = require('./schema');
 
-function calcCustomAttrs(properties, attributes) {
-  const kvPairs = R.map(calcValueToProp(properties), attributes);
+function calcCustomAttrs(attributes) {
+  const kvPairs = R.map(calcKeyValue, attributes);
   const customAttrs = R.mergeAll(kvPairs);
   return customAttrs;
 }
 
-function calcCustomAttribute(properties, attributes, attrName) {
-  const attribute = findObjInList('name', attrName, attributes);
-  const kvPair = calcValueToProp(properties, attribute);
-  return kvPair[attrName];
+const calcKeyValue = (propAndInst) => {
+  const { name } = propAndInst;
+  const value = calcValue(propAndInst);
+  return { [name]: value };
 }
 
-function calcActivityChange(ctx, worker) {
-  const { cfg } = ctx;
-  const { metadata } = cfg;
-  const { activities } = metadata;
-
-  const mapping = activities.map(R.prop('portion'));
-  const idx = getMappingIndexUniform(mapping);
-  const activity = activities[idx];
-
-  const currActivityName = worker.activityName;
-  const currActivity = findObjInList('name', currActivityName, activities);
-  const delayMsec = currActivity.baseDur * 1000;
-
-  return [activity.name, delayMsec];
-}
-
-const calcValue = (valueDescr) => {
-  const { expr } = valueDescr;
+const calcValue = (propAndInst) => {
+  const { name, expr } = propAndInst;
   const value = (expr === 'range')
-    ? calcRangeValue(valueDescr)
-    : calcIdentityValue(valueDescr);
+    ? calcRangeValue(propAndInst)
+    : calcEnumValue(propAndInst);
   return value;
 }
 
-const calcRangeValue = (valueDescr) => {
-  const randNum = calcIdentityValue(valueDescr);
-  const { min, max } = valueDescr;
+const calcRangeValue = (propAndInst) => {
+  const randNum = calcRandomValue(propAndInst);
+  const { min, max } = propAndInst;
   const size = max - min;
   const value = (randNum * size) + min;
   return value;
 };
 
-const calcIdentityValue = (valueDescr) => {
-  const { curve } = valueDescr;
+const calcEnumValue = (propAndInst) => {
+  const { values, valueProps } = propAndInst;
+  const portions = valueProps.map(R.prop('portion'));
+  const randNum = calcRandomValue(propAndInst);
+  const idx = getPortionsIndexUniform(portions, randNum);
+  const value = values[idx];
+  return value;
+};
+
+const calcRandomValue = (propAndInst) => {
+  const { curve } = propAndInst;
   const value = (curve == 'uniform')
     ? Math.random()
     : (Math.random() + Math.random()) / 2;
   return value;
 };
 
-const calcValueToProp = R.curry((properties, attribute) => {
-  const { name, property, mapping } = attribute;
-  const propName = property || name;
-  const prop = findObjInList('name', propName, properties);
-  const { enum: values } = prop;
-  const idx = getMappingIndexUniform(mapping);
-  const val = values[idx];
-  return { [name]: val };
-});
+function calcActivityChange(ctx, worker) {
+  const { cfg } = ctx;
+  const { metadata } = cfg;
+  const { props } = metadata;
+  const propAndInst = getSingleProp('activity', props);
+  const activityName = calcEnumValue(propAndInst);
 
-function getMappingIndexUniform(mapping) {
-  const randNum = Math.random();
+  const currActivityName = worker.activityName;
+  const idx = propAndInst.values.indexOf(currActivityName);
+  if (idx === -1)
+    return ['Available', 2000]
+  const valueProp = propAndInst.valueProps[idx];
+  const delayMsec = valueProp.baseDur * 1000;
+
+  return [activityName, delayMsec];
+}
+
+function getPortionsIndexUniform(mapping, randNum) {
   let upper = 0.0;
   let idx;
   for (let i = 0; i < mapping.length; i++) {
@@ -80,7 +79,5 @@ function getMappingIndexUniform(mapping) {
 module.exports = {
   calcActivityChange,
   calcCustomAttrs,
-  calcCustomAttribute,
-  calcRangeValue,
   calcValue
 }

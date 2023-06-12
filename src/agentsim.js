@@ -6,6 +6,7 @@ const { parseAndValidateArgs } = require('./helpers/args');
 const { calcActivityChange, calcValue } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
+const { getSingleProp } = require('./helpers/schema');
 const { completeTask } = require('./helpers/task');
 const { findObjInList, formatDt, formatSid } = require('./helpers/util');
 const {
@@ -30,13 +31,15 @@ async function init() {
   app.post('/reservation', (req, res) => {
     const { TaskSid, WorkerSid } = req.body;
     const { cfg } = context;
-    const { simulation } = cfg;
+    const { metadata } = cfg;
+    const { props } = metadata;
     const worker = getWorker(context, WorkerSid);
-    const { sid, friendlyName } = worker;
+    const { friendlyName } = worker;
     const now = Date.now();
     console.log(formatDt(now));
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
-    const talkTime = calcValue(simulation.talkTime)
+    const propAndInst = getSingleProp('talkTime', props);
+    const talkTime = calcValue(propAndInst);
     setTimeout(
       function () {
         const now = Date.now();
@@ -136,7 +139,6 @@ function getArgs() {
 async function readConfiguration(args) {
   const { cfgdir } = args;
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
-  const simulation = await readJsonFile(`${cfgdir}/simulation.json`);
   const workers = await readJsonFile(`${cfgdir}/workers.json`);
-  return { metadata, simulation, workers };
+  return { metadata, workers };
 }

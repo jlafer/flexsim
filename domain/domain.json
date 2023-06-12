@@ -1,123 +1,192 @@
 {
-  "arrivalGap": {
-    "expr": "range",
-    "curve": "uniform",
-    "max": 15
-  },
-  "talkTime": {
-    "expr": "range",
-    "curve": "bell",
-    "max": 45
-  },
-  "activities": [
-    {
-      "name": "Available",
-      "baseDur": 90,
-      "portion": 0.25
-    },
-    {
-      "name": "Busy",
-      "baseDur": 15,
-      "portion": 0.15
-    },
-    {
-      "name": "Break",
-      "baseDur": 30,
-      "portion": 0.35
-    },
-    {
-      "name": "Lunch",
-      "baseDur": 120,
-      "portion": 0.25
-    }
+  "brand": "Owl Industries",
+  "agentCnt": 10,
+  "queueFilterProp": "topic",
+  "queueWorkerProps": [
+    "skill"
   ],
-  "workerAttributes": [
+  "props": [
     {
-      "name": "lang",
-      "mapping": [
-        0.33,
-        0.33,
-        0.34
+      "name": "arrivalGap",
+      "dataType": "number",
+      "expr": "range",
+      "min": 5,
+      "max": 15,
+      "instances": [
+        {
+          "curve": "uniform"
+        }
       ]
     },
     {
-      "name": "skill",
-      "property": "topic",
-      "mapping": [
-        0.20,
-        0.20,
-        0.35,
-        0.25
+      "name": "talkTime",
+      "dataType": "number",
+      "expr": "range",
+      "min": 15,
+      "max": 45,
+      "instances": [
+        {
+          "curve": "bell"
+        }
       ]
-    }
-  ],
-  "taskAttributes": [
+    },
     {
       "name": "channel",
-      "mapping": [
-        0.5,
-        0.3,
-        0.2
+      "expr": "enum",
+      "values": [
+        "voice",
+        "chat",
+        "sms"
+      ],
+      "instances": [
+        {
+          "valueProps": [
+            {
+              "portion": 0.5
+            },
+            {
+              "portion": 0.3
+            },
+            {
+              "portion": 0.2
+            }
+          ]
+        }
       ]
     },
     {
-      "name": "topic",
-      "phase": "arrival",
-      "mapping": [
-        0.20,
-        0.20,
-        0.35,
-        0.25
+      "name": "activity",
+      "expr": "enum",
+      "values": [
+        "Available",
+        "Busy",
+        "Break",
+        "Lunch"
+      ],
+      "instances": [
+        {
+          "valueProps": [
+            {
+              "baseDur": 90,
+              "portion": 0.25
+            },
+            {
+              "baseDur": 15,
+              "portion": 0.15
+            },
+            {
+              "baseDur": 30,
+              "portion": 0.35
+            },
+            {
+              "baseDur": 120,
+              "portion": 0.25
+            }
+          ]
+        }
       ]
     },
-    {
-      "name": "intent",
-      "phase": "arrival",
-      "mapping": [
-        0.20,
-        0.20,
-        0.35,
-        0.25
-      ]
-    }
-  ],
-  "properties": [
     {
       "name": "topic",
       "expr": "enum",
-      "enum": [
+      "values": [
         "Checking",
         "CreditCard",
         "Mortgage",
         "OtherLoans"
-      ]
-    },
-    {
-      "name": "channel",
-      "expr": "enum",
-      "enum": [
-        "voice",
-        "chat",
-        "sms"
+      ],
+      "instances": [
+        {
+          "target": "task",
+          "phase": "arrival",
+          "valueProps": [
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.35
+            },
+            {
+              "portion": 0.25
+            }
+          ]
+        },
+        {
+          "target": "worker",
+          "name": "skill",
+          "valueProps": [
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.35
+            },
+            {
+              "portion": 0.25
+            }
+          ]
+        }
       ]
     },
     {
       "name": "intent",
       "expr": "enum",
-      "enum": [
+      "values": [
         "Check account balance",
         "Check payment clearance",
         "Change password",
         "Inquire on rates"
+      ],
+      "instances": [
+        {
+          "target": "task",
+          "phase": "arrival",
+          "valueProps": [
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.35
+            },
+            {
+              "portion": 0.25
+            }
+          ]
+        }
       ]
     },
     {
       "name": "lang",
       "expr": "enum",
-      "enum": [
+      "values": [
         "en-us",
         "en-gb",
         "sp-es"
+      ],
+      "instances": [
+        {
+          "target": "worker",
+          "valueProps": [
+            {
+              "portion": 0.33
+            },
+            {
+              "portion": 0.33
+            },
+            {
+              "portion": 0.34
+            }
+          ]
+        }
       ]
     }
   ]

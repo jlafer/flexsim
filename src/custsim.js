@@ -5,6 +5,7 @@ const { calcValue } = require('./helpers/calcs');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
+const { getAttributeProps, getSingleProp } = require('./helpers/schema');
 const {submitTask} = require('./helpers/task');
 const { delay, formatDt, formatSid } = require('./helpers/util');
 const { fetchWorkflow } = require('./helpers/workflow');
@@ -14,18 +15,20 @@ async function run() {
   const cfg = await readConfiguration(args);
   console.log('cfg:', cfg);
   const context = initializeContext(cfg, args);
+  const { metadata } = cfg;
+  metadata.taskAttributes = getAttributeProps('task', metadata.props);
+  const { props } = metadata;
   await loadTwilioResources(context);
   console.log(`read workflow: ${context.workflow.friendlyName}`);
   let now = Date.now();
   while (now < context.simStopTS) {
     const task = await submitTask(context);
-    //report = addTaskToReport(task)
     console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
-    const delayMsec = calcValue(cfg.simulation.arrivalGap) * 1000
+    const propAndInst = getSingleProp('arrivalGap', props);
+    const delayMsec = calcValue(propAndInst) * 1000;
     await delay(delayMsec);
     now = Date.now();
   }
-  //reportWorkload(report)
   console.log('custsim finished at', formatDt(now));
 }
 
@@ -39,7 +42,6 @@ async function loadTwilioResources(context) {
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
   context.simStopTS = context.simStartTS + (args.timeLim * 1000);
-  //context.arrivallDelayBase = Math.floor(60 / cfg.simulation.arrivalGap) * 1000;
   return context;
 }
 
@@ -66,6 +68,5 @@ async function readConfiguration(args) {
   const { cfgdir } = args;
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   const workflow = await readJsonFile(`${cfgdir}/workflow.json`);
-  const simulation = await readJsonFile(`${cfgdir}/simulation.json`);
-  return { metadata, simulation, workflow };
+  return { metadata, workflow };
 }

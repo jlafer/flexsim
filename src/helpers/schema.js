@@ -49,7 +49,11 @@ const propDefnSchema = {
           items: {
             type: 'object',
             properties: {
-              target: { type: 'string' },
+              target: {
+                type: 'string',
+                enum: ['system', 'task', 'worker'],
+                default: 'system'
+              },
               name: { type: 'string' },
               scheme: {
                 type: 'string',
@@ -64,6 +68,10 @@ const propDefnSchema = {
                 type: 'string',
                 enum: ['uniform', 'bell'],
                 default: 'uniform'
+              },
+              valueCnt: {
+                type: 'integer',
+                default: 1
               },
               valueProps: {
                 type: 'array',
@@ -139,13 +147,20 @@ const getAttributeProps = (target, props) => {
   const tgtProps = R.reduce(
     (accum, testProp) => {
       if (testProp.instances) {
-        const tgtInst = R.find(
+        const tgtInstances = R.filter(
           inst => inst.target === target,
           testProp.instances
         );
-        if (tgtInst) {
-          const propAndInst = { ...testProp, ...tgtInst };
-          return [...accum, propAndInst];
+        if (tgtInstances.length > 0) {
+          const { instances, ...restOfProp } = testProp;
+          const propAndInstArr = R.map(
+            (inst) => {
+              const propAndInst = { ...restOfProp, ...inst };
+              return propAndInst;
+            },
+            tgtInstances
+          );
+          return [...accum, ...propAndInstArr];
         }
       }
       return accum

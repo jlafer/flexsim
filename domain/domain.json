@@ -143,6 +143,25 @@
               "portion": 0.25
             }
           ]
+        },
+        {
+          "target": "worker",
+          "name": "routing.skills",
+          "valueCnt": 2,
+          "valueProps": [
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.20
+            },
+            {
+              "portion": 0.35
+            },
+            {
+              "portion": 0.25
+            }
+          ]
         }
       ]
     },

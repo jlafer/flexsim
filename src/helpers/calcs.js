@@ -2,9 +2,13 @@ const R = require('ramda');
 
 const { getSingleProp } = require('./schema');
 
-function calcCustomAttrs(attributes) {
-  const kvPairs = R.map(calcKeyValue, attributes);
-  const customAttrs = R.mergeAll(kvPairs);
+function calcCustomAttrs(props) {
+  let customAttrs;
+  props.forEach(prop => {
+    const value = calcValue(prop);
+    const pathArr = prop.name.split('.');
+    customAttrs = R.assocPath(pathArr, value, customAttrs);
+  });
   return customAttrs;
 }
 
@@ -15,7 +19,7 @@ const calcKeyValue = (propAndInst) => {
 }
 
 const calcValue = (propAndInst) => {
-  const { name, expr } = propAndInst;
+  const { expr } = propAndInst;
   const value = (expr === 'range')
     ? calcRangeValue(propAndInst)
     : calcEnumValue(propAndInst);

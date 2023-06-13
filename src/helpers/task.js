@@ -43,11 +43,19 @@ const submitTask = async (ctx) => {
   return task;
 };
 
+const wrapupTask = (ctx, taskSid) => {
+  setTaskStatus('wrapping', ctx, taskSid);
+};
+
 const completeTask = (ctx, taskSid) => {
+  setTaskStatus('completed', ctx, taskSid);
+};
+
+const setTaskStatus = (status, ctx, taskSid) => {
   const { args, client } = ctx;
   client.taskrouter.v1.workspaces(args.wrkspc).tasks(taskSid)
     .update({
-      assignmentStatus: 'completed',
+      assignmentStatus: status,
       reason: 'work is done'
     })
 };
@@ -73,5 +81,6 @@ module.exports = {
   fetchFlexsimTasks,
   fetchTasks,
   removeTasks,
-  submitTask
+  submitTask,
+  wrapupTask
 }

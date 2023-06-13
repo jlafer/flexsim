@@ -31,6 +31,18 @@
       ]
     },
     {
+      "name": "wrapTime",
+      "dataType": "number",
+      "expr": "range",
+      "min": 5,
+      "max": 25,
+      "instances": [
+        {
+          "curve": "bell"
+        }
+      ]
+    },
+    {
       "name": "channel",
       "expr": "enum",
       "values": [

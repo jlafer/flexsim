@@ -111,6 +111,8 @@ const checkAndFillDomain = (domain) => {
   res = setDefaultProp(res, ['props', 'arrivalGap', 'max'], 20);
   res = setDefaultProp(res, ['props', 'talkTime', 'min'], 10);
   res = setDefaultProp(res, ['props', 'talkTime', 'max'], 50);
+  res = setDefaultProp(res, ['props', 'wrapTime', 'min'], 10);
+  res = setDefaultProp(res, ['props', 'wrapTime', 'max'], 30);
 
   return [true, res];
 }

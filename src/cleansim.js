@@ -5,7 +5,7 @@ const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { removeTasks } = require('./helpers/task');
-const { changeActivity, fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
+const { fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
 const { fetchWorkflow } = require('./helpers/workflow');
 
 async function run() {

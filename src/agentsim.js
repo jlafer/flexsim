@@ -7,7 +7,7 @@ const { calcActivityChange, calcValue } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { getSingleProp } = require('./helpers/schema');
-const { completeTask } = require('./helpers/task');
+const { completeTask, wrapupTask } = require('./helpers/task');
 const { findObjInList, formatDt, formatSid } = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
@@ -38,14 +38,16 @@ async function init() {
     const now = Date.now();
     console.log(formatDt(now));
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
-    const propAndInst = getSingleProp('talkTime', props);
-    const talkTime = calcValue(propAndInst);
+    const talkTimeProp = getSingleProp('talkTime', props);
+    const talkTime = calcValue(talkTimeProp);
+    const wrapTimeProp = getSingleProp('wrapTime', props);
+    const wrapTime = calcValue(wrapTimeProp);
     setTimeout(
       function () {
         const now = Date.now();
         console.log(formatDt(now));
-        console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
-        completeTask(context, TaskSid);
+        console.log(`  ${friendlyName} wrapping task ${formatSid(TaskSid)}`);
+        doWrapupTask(context, TaskSid, friendlyName, wrapTime);
       },
       (talkTime * 1000)
     );
@@ -58,6 +60,19 @@ async function init() {
 }
 
 init();
+
+const doWrapupTask = async (context, TaskSid, friendlyName, wrapTime) => {
+  await wrapupTask(context, TaskSid);
+  setTimeout(
+    function () {
+      const now = Date.now();
+      console.log(formatDt(now));
+      console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
+      completeTask(context, TaskSid);
+    },
+    (wrapTime * 1000)
+  );
+};
 
 async function loginAllWorkers(context) {
   const { workers, activities } = context;

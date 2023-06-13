@@ -12,15 +12,24 @@ function calcCustomAttrs(props) {
   return customAttrs;
 }
 
-const calcKeyValue = (propAndInst) => {
-  const { name } = propAndInst;
-  const value = calcValue(propAndInst);
-  return { [name]: value };
+const calcValue = (propAndInst) => {
+  if (propAndInst.valueCnt === 1) {
+    return calcScalarValue(propAndInst);
+  }
+  return calcArrayValue(propAndInst);
 }
 
-const calcValue = (propAndInst) => {
-  const { expr } = propAndInst;
-  const value = (expr === 'range')
+const calcArrayValue = (propAndInst) => {
+  const res = [];
+  for (let i = 0; i < propAndInst.valueCnt; i++) {
+    const value = calcScalarValue(propAndInst);
+    res.push(value);
+  }
+  return R.uniq(res);
+};
+
+const calcScalarValue = (propAndInst) => {
+  const value = (propAndInst.expr === 'range')
     ? calcRangeValue(propAndInst)
     : calcEnumValue(propAndInst);
   return value;

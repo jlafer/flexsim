@@ -100,7 +100,10 @@ const makeWorker = (i, workerAttributes) => {
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
   const full_name = faker.person.fullName();
-  const customAttrs = calcCustomAttrs(workerAttributes);
+  let customAttrs = calcCustomAttrs(workerAttributes);
+  if (R.hasPath(['routing', 'skills'], customAttrs)) {
+    customAttrs = R.assocPath(['routing', 'levels'], {}, customAttrs);
+  }
   const attributes = {
     data: 'flexsim',
     contact_uri: `client:${friendlyName}`,

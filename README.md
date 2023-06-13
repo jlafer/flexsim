@@ -54,6 +54,9 @@ If you specify any non-standard channels in your domain, make sure the correspon
 #### Worker Activities
 If you specify any non-standard Worker activities in your domain, make sure they have been created in the target Flex project prior to running `agentsim`.
 
+#### Skills
+To avoid conflicts with the existing configuration of your target Flex project, the `deploy` script doesn't build out the list of possible `routing.skills` values nor the proficiencies. Thus, you should use the Flex Admin page, under the Skills menu choice, to define any of the skills that can be assigned to agents. By default these are: "Sales", "Service" and "Support".
+
 ## Script Execution
 In the project directory, there are five NodeJS scripts. See the `execution.txt` file in the project root directory for sample command lines to run these scripts.
 
@@ -120,6 +123,9 @@ The optional command-line options include:
 
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 
+## Using flexsim in a Demo
+When using `flexsim` in a demo, here are some tips:
+- All simulated agents start out in an Available state and it takes awhile for the random nature of the simulation to place agents in a mixture of activities that is both realistic and in line with the configured value-percentages. Thus, start `agentsim` at least 10 minutes before your demo.
 
 ## Changelog
 

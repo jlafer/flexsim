@@ -3,7 +3,7 @@
   "agentCnt": 10,
   "queueFilterProp": "topic",
   "queueWorkerProps": [
-    "skill"
+    "routing.skills"
   ],
   "props": [
     {

@@ -43,13 +43,16 @@ function genQueues(metadata) {
   const { queueWorkerProps, workerAttributes } = metadata;
   const queuePropName = queueWorkerProps[0];
   const propAndInst = workerAttributes.find(a => a.name === queuePropName);
-  const queues = propAndInst.values.map(propToQueue(queuePropName));
+  const { valueCnt, values } = propAndInst;
+  const queues = values.map(propToQueue(queuePropName, valueCnt));
   return queues;
 }
 
-const propToQueue = (attrName) =>
+const propToQueue = (attrName, valueCnt) =>
   (attrValue) => {
-    const expr = `${attrName} == '${attrValue}'`;
+    const expr = (valueCnt === 1)
+      ? `${attrName} == '${attrValue}'`
+      : `${attrName} HAS '${attrValue}'`;
     const data = {
       targetWorkers: expr,
       friendlyName: attrValue

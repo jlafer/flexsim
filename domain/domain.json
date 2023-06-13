@@ -10,8 +10,20 @@
       "name": "arrivalGap",
       "dataType": "number",
       "expr": "range",
-      "min": 5,
-      "max": 15,
+      "min": 3,
+      "max": 5,
+      "instances": [
+        {
+          "curve": "uniform"
+        }
+      ]
+    },
+    {
+      "name": "abandonTime",
+      "dataType": "number",
+      "expr": "range",
+      "min": 15,
+      "max": 60,
       "instances": [
         {
           "curve": "uniform"

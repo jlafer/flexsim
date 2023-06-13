@@ -3,7 +3,14 @@ const R = require('ramda');
 
 const { calcCustomAttrs, calcValue } = require('./calcs');
 const { getSingleProp } = require('./schema');
-const { filterObjInList, findObjInList, hasAttributeValue } = require('./util');
+const { filterObjInList, findObjInList, formatSid, hasAttributeValue } = require('./util');
+
+const fetchTask = async (ctx, sid) => {
+  const { args, client } = ctx;
+  const rawTask = await client.taskrouter.v1.workspaces(args.wrkspc).tasks(sid).fetch();
+  const task = pickKeyProps(rawTask);
+  return task;
+};
 
 const fetchTasks = async (ctx) => {
   const { args, client } = ctx;
@@ -40,7 +47,23 @@ const submitTask = async (ctx) => {
         workflowSid: workflow.sid
       }
     );
+  const abandonTimeProp = getSingleProp('abandonTime', props);
+  const abandonTime = calcValue(abandonTimeProp);
+  setTimeout(
+    function () {
+      cancelTask(ctx, task.sid);
+    },
+    abandonTime * 1000
+  );
   return task;
+};
+
+const cancelTask = async (ctx, taskSid) => {
+  const task = await fetchTask(ctx, taskSid);
+  if (task.assignmentStatus === 'pending') {
+    setTaskStatus('canceled', ctx, taskSid);
+    console.log(`canceling task ${formatSid(task.sid)}`);
+  }
 };
 
 const wrapupTask = (ctx, taskSid) => {
@@ -53,11 +76,14 @@ const completeTask = (ctx, taskSid) => {
 
 const setTaskStatus = (status, ctx, taskSid) => {
   const { args, client } = ctx;
-  client.taskrouter.v1.workspaces(args.wrkspc).tasks(taskSid)
+  try {
+    client.taskrouter.v1.workspaces(args.wrkspc).tasks(taskSid)
     .update({
       assignmentStatus: status,
       reason: 'work is done'
     })
+  }
+  catch (err) { }
 };
 
 async function removeTasks(ctx) {
@@ -77,6 +103,7 @@ function pickKeyProps(task) {
 }
 
 module.exports = {
+  cancelTask,
   completeTask,
   fetchFlexsimTasks,
   fetchTasks,

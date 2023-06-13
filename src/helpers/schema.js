@@ -7,7 +7,7 @@ const schema = {
   $id: 'http://twilio.com/schemas/flexsim/domain.json',
   type: 'object',
   properties: {
-    brand: { type: 'string', default: 'Owl Industries' },
+    brand: { type: 'string' },
     queueFilterProp: { type: 'string' },
     queueWorkerProps: {
       type: 'array',
@@ -105,7 +105,7 @@ const propDefnSchema = {
   }
 };
 
-const checkAndFillDomain = (domain) => {
+const checkAndFillDomain = (domain, defaults) => {
   const ajv = new Ajv({ useDefaults: true });
   const validate = ajv.addSchema(propDefnSchema).compile(schema);
   // NOTE: ajv's validate mutates domain by filling default values
@@ -115,12 +115,20 @@ const checkAndFillDomain = (domain) => {
 
   let res;
   // supply defaults for elements using referenced subschemas; ajv "default" keyword not usable with these
+
+  // numeric elements - no localization needed
   res = setDefaultProp(domain, ['props', 'arrivalGap', 'min'], 3);
   res = setDefaultProp(res, ['props', 'arrivalGap', 'max'], 20);
+  res = setDefaultProp(res, ['props', 'abandonTime', 'min'], 5);
+  res = setDefaultProp(res, ['props', 'abandonTime', 'max'], 30);
   res = setDefaultProp(res, ['props', 'talkTime', 'min'], 10);
   res = setDefaultProp(res, ['props', 'talkTime', 'max'], 50);
   res = setDefaultProp(res, ['props', 'wrapTime', 'min'], 10);
   res = setDefaultProp(res, ['props', 'wrapTime', 'max'], 30);
+
+  // textual data - use localized defaults
+  if (!res.brand)
+    res.brand = defaults.brand;
 
   return [true, res];
 }

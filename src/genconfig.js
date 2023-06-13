@@ -10,9 +10,9 @@ const { readJsonFile, writeToJsonFile } = require('./helpers/files');
 async function run() {
   const args = getArgs();
   const { cfgdir } = args;
-  const domain = await readDomainData(args);
+  const [domain, defaults] = await readDomainData(args);
   // NOTE: checkAndFillDomain mutates 'domain'
-  const [valid, result] = checkAndFillDomain(domain);
+  const [valid, result] = checkAndFillDomain(domain, defaults);
   if (!valid) {
     console.error('domain.json validation errors:', result);
     throw new Error('validation of domain.json failed');
@@ -132,18 +132,20 @@ async function writeCfgToCfgdir(cfgdir, cfg) {
 }
 
 async function readDomainData(args) {
-  const { domaindir } = args;
+  const { domaindir, locale } = args;
   const domain = await readJsonFile(`${domaindir}/domain.json`);
-  return domain;
+  const defaults = await readJsonFile(`${domaindir}/${locale}.json`);
+  return [domain, defaults];
 }
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { d: 'domaindir', c: 'cfgdir' },
+    aliases: { d: 'domaindir', c: 'cfgdir', l: 'locale' },
     required: []
   });
   const { } = process.env;
   args.domaindir = args.domaindir || 'domain';
+  args.locale = args.locale || 'en-us';
   const { domaindir, cfgdir } = args;
   console.log('domaindir:', domaindir);
   console.log('cfgdir:', cfgdir);

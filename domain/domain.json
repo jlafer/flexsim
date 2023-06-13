@@ -1,5 +1,4 @@
 {
-  "brand": "Owl Industries",
   "agentCnt": 10,
   "queueFilterProp": "topic",
   "queueWorkerProps": [

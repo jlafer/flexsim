@@ -147,9 +147,49 @@ const mergeDomainIntoDefaults = (defaults, domain) => {
     : getStdProps(defaultProps);
 
   const finalProps = R.mergeDeepRight(finalDefaultprops, domainProps);
-  const finalDomain = { ...finalKVs, props: objDictToObjArr(finalProps) };
+  const propsArr = objDictToObjArr(finalProps);
+  propsArr.forEach(fillMissingPropFields);
+  const finalDomain = { ...finalKVs, props: propsArr };
   return finalDomain;
 };
+
+function fillMissingPropFields(prop) {
+  const { name } = prop;
+  if (!prop.expr)
+    prop.expr = 'enum';
+  if (!prop.dataType)
+    prop.dataType = 'string';
+  if (prop.expr === 'enum' && (!prop.values || prop.values.length === 0))
+    throw new Error(`property ${name} has expr=enum but no values specified`);
+  if (prop.expr === 'range') {
+    if (!prop.min)
+      prop.min = 0;
+    if (!prop.max)
+      prop.max = 1;
+  }
+  if (!prop.instances)
+    throw new Error(`property ${name} has no instances specified`);
+  prop.instances.forEach(fillMissingInstanceFields(prop));
+}
+
+const fillMissingInstanceFields = (prop) =>
+  inst => {
+    if (!inst.target) {
+      inst.target = 'task';
+    }
+    if (inst.target === 'task') {
+      if (!inst.phase)
+        inst.phase = 'arrival';
+    }
+    if (!inst.scheme)
+      inst.scheme = 'independent';
+    if (!inst.curve)
+      inst.curve = (prop.expr === 'enum') ? 'uniform' : 'bell';
+    if (!inst.valueCnt)
+      inst.valueCnt = 1;
+    if (prop.expr === 'enum' && !inst.valueProps)
+      throw new Error(`property ${name} has instance with no valueProps specified`);
+  }
 
 const objDictToObjArr = (dictByName) => {
   const arr = R.toPairs(dictByName)

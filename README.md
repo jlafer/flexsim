@@ -61,18 +61,23 @@ If you specify any non-standard Worker activities in your domain, make sure they
 #### Skills
 To avoid conflicts with the existing configuration of your target Flex project, the `deploy` script doesn't build out the list of possible `routing.skills` values nor the proficiencies. Thus, you should use the Flex Admin page, under the Skills menu choice, to define any of the skills that can be assigned to agents. By default these are: "Sales", "Service" and "Support".
 
+## Localization
+The simulator supports localization. Default values for domain data are read from a localized file, which can be specified using the `--locale` option when running `genconfig`. Currently, the only default domain-values file supplied is for US English. The project maintainers are looking for assistance in creating default domain-values files for other locales.
+
+When a locale is specified, `genconfig` will generate localized agent names and `custsim` will generate localized customer names. Currently, the supported locales for naming people include: 'en_us', 'es_sp', 'de_de' and 'fr_fr'.
+
 ## Script Execution
 In the project directory, there are five NodeJS scripts. See the `execution.txt` file in the project root directory for sample command lines to run these scripts.
 
 ### genconfig
 To start the `genconfig` script:
 ```
-node ./src/deploy [--domaindir dir] [--cfgdir dir] [--locale]
+node ./src/deploy [--domaindir dir] [--cfgdir dir] [--locale code]
 ```
 The optional command-line options include:
 - `domaindir` specifies the directory where the `domain.json` file, if any, is located
 - `cfgdir` specifies the directory where the configuration files should be written
-- `locale` specifies the name of a JSON file containing localized domain default values
+- `locale` specifies the name of a locale, which is a 5-letter language and country code (following the ISO 639-1 and ISO 3166-1 standards, e.g., 'es_sp').
 
 ### deploy
 To start the `deploy` script:
@@ -110,10 +115,11 @@ The simulation builds and deploys a TR Workflow that uses the configured Task at
 ### custsim
 To start the `custsim` script:
 ```
-node ./src/custsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx]
+node ./src/custsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--timeLim num] [--locale code]
 ```
 The optional command-line options include:
 - `cfgdir` specifies the directory where the configuration files to be read are located
+- `locale` specifies the name of a locale, which is a 5-letter language and country code (following the ISO 639-1 and ISO 3166-1 standards, e.g., 'es_sp').
 
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 

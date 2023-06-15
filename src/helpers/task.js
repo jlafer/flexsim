@@ -3,7 +3,7 @@ const R = require('ramda');
 
 const { calcCustomAttrs, calcValue } = require('./calcs');
 const { getSingleProp } = require('./schema');
-const { filterObjInList, findObjInList, formatSid, hasAttributeValue } = require('./util');
+const { filterObjInList, findObjInList, formatSid, hasAttributeValue, localeToFakerModule } = require('./util');
 
 const fetchTask = async (ctx, sid) => {
   const { args, client } = ctx;
@@ -27,6 +27,7 @@ const fetchFlexsimTasks = async (ctx) => {
 
 const submitTask = async (ctx) => {
   const { args, cfg, client, workflow, channels } = ctx;
+  const { locale, wrkspc } = args;
   const { metadata } = cfg;
   const { props, taskAttributes } = metadata;
   const channelProp = getSingleProp('channel', props);
@@ -34,8 +35,9 @@ const submitTask = async (ctx) => {
   const taskChannel = findObjInList('uniqueName', channelName, channels);
   const arrivalAttributes = filterObjInList('phase', 'arrival', taskAttributes);
   const customAttrs = calcCustomAttrs(arrivalAttributes);
-  const name = faker.person.fullName();
-  const task = await client.taskrouter.v1.workspaces(args.wrkspc).tasks
+  const fakerModule = localeToFakerModule(locale);
+  const name = fakerModule.person.fullName();
+  const task = await client.taskrouter.v1.workspaces(wrkspc).tasks
     .create(
       {
         taskChannel: taskChannel.sid,

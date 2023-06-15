@@ -47,7 +47,7 @@ const initializeContext = (cfg, args) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', l: 'locale' },
     required: []
   });
   const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID } = process.env;
@@ -56,11 +56,13 @@ function getArgs() {
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
   args.timeLim = args.timeLim || 3600;
-  const { acct, wrkspc, cfgdir, timeLim } = args;
+  args.locale = args.locale || 'en-us';
+  const { acct, wrkspc, cfgdir, timeLim, locale } = args;
   console.log('acct:', acct);
   console.log('wrkspc:', wrkspc);
   console.log('cfgdir:', cfgdir);
   console.log('timeLim:', timeLim);
+  console.log('locale:', locale);
   return args;
 }
 

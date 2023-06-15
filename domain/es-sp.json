@@ -1,3 +1,173 @@
 {
-  "brand": "Industrias del Bùho"
+  "brand": "Industrias del Bùho",
+  "agentCnt": 10,
+  "queueFilterProp": "topic",
+  "queueWorkerProps": [
+    "routing.skills"
+  ],
+  "props": {
+    "arrivalGap": {
+      "dataType": "number",
+      "expr": "range",
+      "min": 5,
+      "max": 10,
+      "instances": [
+        {
+          "curve": "uniform"
+        }
+      ]
+    },
+    "abandonTime": {
+      "dataType": "number",
+      "expr": "range",
+      "min": 15,
+      "max": 60,
+      "instances": [
+        {
+          "curve": "uniform"
+        }
+      ]
+    },
+    "talkTime": {
+      "dataType": "number",
+      "expr": "range",
+      "min": 15,
+      "max": 45,
+      "instances": [
+        {
+          "curve": "bell"
+        }
+      ]
+    },
+    "wrapTime": {
+      "dataType": "number",
+      "expr": "range",
+      "min": 5,
+      "max": 25,
+      "instances": [
+        {
+          "curve": "bell"
+        }
+      ]
+    },
+    "channel": {
+      "expr": "enum",
+      "values": [
+        "voice",
+        "chat",
+        "sms"
+      ],
+      "instances": [
+        {
+          "valueProps": [
+            {
+              "portion": 0.4
+            },
+            {
+              "portion": 0.3
+            },
+            {
+              "portion": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    "activity": {
+      "expr": "enum",
+      "values": [
+        "Available",
+        "Busy",
+        "Break",
+        "Lunch"
+      ],
+      "instances": [
+        {
+          "valueProps": [
+            {
+              "baseDur": 60,
+              "portion": 0.75
+            },
+            {
+              "baseDur": 15,
+              "portion": 0.05
+            },
+            {
+              "baseDur": 30,
+              "portion": 0.10
+            },
+            {
+              "baseDur": 120,
+              "portion": 0.10
+            }
+          ]
+        }
+      ]
+    },
+    "topic": {
+      "expr": "enum",
+      "values": [
+        "Sales",
+        "Service",
+        "Support"
+      ],
+      "instances": [
+        {
+          "target": "task",
+          "phase": "arrival",
+          "valueProps": [
+            {
+              "portion": 0.40
+            },
+            {
+              "portion": 0.35
+            },
+            {
+              "portion": 0.25
+            }
+          ]
+        },
+        {
+          "target": "worker",
+          "name": "routing.skills",
+          "valueCnt": 2,
+          "valueProps": [
+            {
+              "portion": 0.40
+            },
+            {
+              "portion": 0.35
+            },
+            {
+              "portion": 0.25
+            }
+          ]
+        }
+      ]
+    },
+    "lang": {
+      "expr": "enum",
+      "values": [
+        "en-us",
+        "en-gb",
+        "sp-es"
+      ],
+      "instances": [
+        {
+          "target": "worker",
+          "valueProps": [
+            {
+              "portion": 0.33
+            },
+            {
+              "portion": 0.33
+            },
+            {
+              "portion": 0.34
+            }
+          ]
+        }
+      ]
+    }
+  }
 }

@@ -1,11 +1,11 @@
 require("dotenv").config();
-const { faker } = require('@faker-js/faker');
 const R = require('ramda');
 
 const { parseAndValidateArgs } = require('./helpers/args');
 const { calcCustomAttrs } = require('./helpers/calcs');
 const { checkAndFillDomain, getAttributeProps } = require('./helpers/schema');
 const { readJsonFile, writeToJsonFile } = require('./helpers/files');
+const { localeToFakerModule } = require('./helpers/util');
 
 async function run() {
   const args = getArgs();
@@ -25,7 +25,7 @@ async function run() {
 run();
 
 function genConfiguration(context) {
-  const { domain } = context;
+  const { args, domain } = context;
   const cfg = {};
   cfg.metadata = R.pick(
     ['brand', 'agentCnt', 'queueFilterProp', 'queueWorkerProps', 'props'],
@@ -33,7 +33,7 @@ function genConfiguration(context) {
   );
   cfg.metadata.workerAttributes = getAttributeProps('worker', cfg.metadata.props);
   cfg.metadata.taskAttributes = getAttributeProps('task', cfg.metadata.props);
-  cfg.workers = genWorkers(cfg.metadata);
+  cfg.workers = genWorkers(cfg.metadata, args.locale);
   cfg.queues = genQueues(cfg.metadata);
   cfg.workflow = genWorkflow(cfg.metadata);
   return cfg;
@@ -60,11 +60,11 @@ const propToQueue = (attrName, valueCnt) =>
     return data;
   }
 
-function genWorkers(metadata) {
+function genWorkers(metadata, locale) {
   const { agentCnt, workerAttributes } = metadata;
   const workers = [];
   for (let i = 0; i < agentCnt; i++) {
-    const data = makeWorker(i, workerAttributes);
+    const data = makeWorker(i, workerAttributes, locale);
     workers.push(data);
   }
   return workers;
@@ -99,10 +99,11 @@ const propToFilter = (attrName) =>
     };
   };
 
-const makeWorker = (i, workerAttributes) => {
+const makeWorker = (i, workerAttributes, locale) => {
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
-  const full_name = faker.person.fullName();
+  const fakerModule = localeToFakerModule(locale);
+  const full_name = fakerModule.person.fullName();
   let customAttrs = calcCustomAttrs(workerAttributes);
   if (R.hasPath(['routing', 'skills'], customAttrs)) {
     customAttrs = R.assocPath(['routing', 'levels'], {}, customAttrs);
@@ -146,8 +147,9 @@ function getArgs() {
   const { } = process.env;
   args.domaindir = args.domaindir || 'domain';
   args.locale = args.locale || 'en-us';
-  const { domaindir, cfgdir } = args;
+  const { domaindir, cfgdir, locale } = args;
   console.log('domaindir:', domaindir);
   console.log('cfgdir:', cfgdir);
+  console.log('locale:', locale);
   return args;
 }

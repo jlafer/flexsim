@@ -57,7 +57,7 @@ const queueFriendlyNameToSid = (queues) =>
   (filter) => {
     const { targets } = filter;
     const target = targets[0];
-    console.debug(`looking up queue -${target.queue}`);
+    //console.debug(`looking up queue -${target.queue}`);
     const queue = findObjInList('friendlyName', target.queue, queues);
     if (!queue) {
       console.error(`ERROR: queue -${target.queue}- not found???`);

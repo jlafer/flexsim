@@ -37,9 +37,10 @@ const calcScalarValue = (propAndInst) => {
 
 const calcRangeValue = (propAndInst) => {
   const randNum = calcRandomValue(propAndInst);
-  const { min, max } = propAndInst;
+  const { min, max, dataType } = propAndInst;
   const size = max - min;
-  const value = (randNum * size) + min;
+  const decValue = (randNum * size) + min;
+  const value = (dataType === 'integer') ? Math.round(decValue) : decValue;
   return value;
 };
 

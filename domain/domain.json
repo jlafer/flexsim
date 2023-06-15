@@ -1,6 +1,6 @@
 {
   "brand": "ACME",
-  "agentCnt": 10,
+  "agentCnt": 20,
   "queueFilterProp": "topic",
   "queueWorkerProps": [
     "routing.skills"
@@ -116,24 +116,6 @@
         {
           "target": "task",
           "phase": "arrival",
-          "valueProps": [
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.35
-            },
-            {
-              "portion": 0.25
-            }
-          ]
-        },
-        {
-          "target": "worker",
-          "name": "skill",
           "valueProps": [
             {
               "portion": 0.20

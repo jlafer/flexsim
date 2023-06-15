@@ -25,7 +25,11 @@ The customer simulator script reads the configuration files and generates Tasks 
 The system has four execution modes: configuration generation, infrastructure deployment, simulation and (as needed) cleanup. The configuration generation mode uses a combination of default values and user-supplied inputs to generate a set of JSON configuration files. The deployment, simulation and cleanup modules then read the configuration files when executing against a Flex project.
 
 ### Defaults
-For ease of use, the configuration generator can be run without any input from the user, simply by relying on default values. This will support a bare-bones, generic simulation environment. The configuration generator uses the default values to describe the simulation domain. These values can then be overridden by the user via a combination of a `domain.json` file and command-line options. It then uses the combination of those values to generate the configuration files used during the other modes of operation.
+For ease of use, the configuration generator can be run without any input from the user, simply by relying on default domain values. This will support a bare-bones, generic simulation environment. The default values have been chosen to best support a typical SE-led customer demo. They are not very realistic but they do make for a lively demo in the Flex realtime dashboards. Thus, the defaults may not be appropriate for other use cases.
+
+The defaults have been localized for US English and are read (by default) from a file at `domain/en-us.json`. The `flexsim` system can be localized for a different locale by creation of a different defaults file, which can be specified using the `--locale` option to the `genconfig` script.
+
+The default values can then be overridden by the user using a combination of a `domain.json` file and command-line options. It then uses the combination of those values to generate the configuration files used during the other modes of operation.
 
 ### domain.json
 For saving a custom simulation domain description, the user can provision a file, named `domain.json`. The `genconfig` script can read this file and generate configuration files based on the description there.  This allows the user to control nearly every aspect of the resulting simulation: tasks, channels, agent counts, customer intents, routing criteria, handle times, agent activities, etc.
@@ -63,11 +67,12 @@ In the project directory, there are five NodeJS scripts. See the `execution.txt`
 ### genconfig
 To start the `genconfig` script:
 ```
-node ./src/deploy [--domaindir dir] [--cfgdir dir]
+node ./src/deploy [--domaindir dir] [--cfgdir dir] [--locale]
 ```
 The optional command-line options include:
 - `domaindir` specifies the directory where the `domain.json` file, if any, is located
 - `cfgdir` specifies the directory where the configuration files should be written
+- `locale` specifies the name of a JSON file containing localized domain default values
 
 ### deploy
 To start the `deploy` script:

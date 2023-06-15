@@ -1,12 +1,12 @@
 {
+  "brand": "ACME",
   "agentCnt": 10,
   "queueFilterProp": "topic",
   "queueWorkerProps": [
     "routing.skills"
   ],
-  "props": [
-    {
-      "name": "arrivalGap",
+  "props": {
+    "arrivalGap": {
       "dataType": "number",
       "expr": "range",
       "min": 3,
@@ -17,8 +17,7 @@
         }
       ]
     },
-    {
-      "name": "abandonTime",
+    "abandonTime": {
       "dataType": "number",
       "expr": "range",
       "min": 15,
@@ -29,8 +28,7 @@
         }
       ]
     },
-    {
-      "name": "talkTime",
+    "talkTime": {
       "dataType": "number",
       "expr": "range",
       "min": 15,
@@ -41,8 +39,7 @@
         }
       ]
     },
-    {
-      "name": "wrapTime",
+    "wrapTime": {
       "dataType": "number",
       "expr": "range",
       "min": 5,
@@ -53,8 +50,7 @@
         }
       ]
     },
-    {
-      "name": "channel",
+    "channel": {
       "expr": "enum",
       "values": [
         "voice",
@@ -77,8 +73,7 @@
         }
       ]
     },
-    {
-      "name": "activity",
+    "activity": {
       "expr": "enum",
       "values": [
         "Available",
@@ -109,8 +104,7 @@
         }
       ]
     },
-    {
-      "name": "topic",
+    "topic": {
       "expr": "enum",
       "values": [
         "Checking",
@@ -176,8 +170,7 @@
         }
       ]
     },
-    {
-      "name": "intent",
+    "intent": {
       "expr": "enum",
       "values": [
         "Check account balance",
@@ -205,31 +198,6 @@
           ]
         }
       ]
-    },
-    {
-      "name": "lang",
-      "expr": "enum",
-      "values": [
-        "en-us",
-        "en-gb",
-        "sp-es"
-      ],
-      "instances": [
-        {
-          "target": "worker",
-          "valueProps": [
-            {
-              "portion": 0.33
-            },
-            {
-              "portion": 0.33
-            },
-            {
-              "portion": 0.34
-            }
-          ]
-        }
-      ]
     }
-  ]
+  }
 }

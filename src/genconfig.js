@@ -10,12 +10,12 @@ const { readJsonFile, writeToJsonFile } = require('./helpers/files');
 async function run() {
   const args = getArgs();
   const { cfgdir } = args;
-  const [domain, defaults] = await readDomainData(args);
+  const [defaults, domain] = await readDomainData(args);
   // NOTE: checkAndFillDomain mutates 'domain'
-  const [valid, result] = checkAndFillDomain(domain, defaults);
+  const [valid, result] = checkAndFillDomain(defaults, domain);
   if (!valid) {
-    console.error('domain.json validation errors:', result);
-    throw new Error('validation of domain.json failed');
+    console.error('json validation errors:', result);
+    throw new Error('validation of json failed');
   }
   const context = { args, domain: result };
   const cfg = genConfiguration(context);
@@ -118,7 +118,7 @@ const makeWorker = (i, workerAttributes) => {
 
 async function writeCfgToCfgdir(cfgdir, cfg) {
   const {
-    metadata, queues, workers, workflow, simulation
+    metadata, queues, workers, workflow
   } = cfg;
   let path;
   path = `${cfgdir}/metadata.json`;
@@ -133,9 +133,9 @@ async function writeCfgToCfgdir(cfgdir, cfg) {
 
 async function readDomainData(args) {
   const { domaindir, locale } = args;
-  const domain = await readJsonFile(`${domaindir}/domain.json`);
   const defaults = await readJsonFile(`${domaindir}/${locale}.json`);
-  return [domain, defaults];
+  const domain = await readJsonFile(`${domaindir}/domain.json`);
+  return [defaults, domain];
 }
 
 function getArgs() {

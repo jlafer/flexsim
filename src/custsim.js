@@ -1,11 +1,11 @@
 require("dotenv").config();
 
 const {parseAndValidateArgs} = require('./helpers/args');
-const { calcValue } = require('./helpers/calcs');
+const { calcAndSaveValue } = require('./helpers/calcs');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
-const { getAttributeProps, getSingleProp } = require('./helpers/schema');
+const { getSinglePropInstance } = require('./helpers/schema');
 const {submitTask} = require('./helpers/task');
 const { delay, formatDt, formatSid } = require('./helpers/util');
 const { fetchWorkflow } = require('./helpers/workflow');
@@ -15,18 +15,18 @@ async function run() {
   const cfg = await readConfiguration(args);
   console.log('cfg:', cfg);
   const context = initializeContext(cfg, args);
-  const { metadata } = cfg;
-  metadata.taskAttributes = getAttributeProps('task', metadata.props);
-  const { props } = metadata;
+  const { propValues, propInstances } = context;
   await loadTwilioResources(context);
   console.log(`read workflow: ${context.workflow.friendlyName}`);
   let now = Date.now();
   while (now < context.simStopTS) {
     const task = await submitTask(context);
     console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
-    const propAndInst = getSingleProp('arrivalGap', props);
-    const delayMsec = calcValue(propAndInst) * 1000;
-    await delay(delayMsec);
+    const valuesDescriptor = { entity: 'tasks', phase: 'arrive', id: task.attributes.name };
+    const propAndInst = getSinglePropInstance('arrivalGap', propInstances);
+    // TODO arrivalGap does not need to be saved
+    const arrivalGap = calcAndSaveValue(propInstances, propValues, valuesDescriptor, propAndInst);
+    await delay(arrivalGap * 1000);
     now = Date.now();
   }
   console.log('custsim finished at', formatDt(now));

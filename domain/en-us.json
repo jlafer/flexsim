@@ -1,6 +1,6 @@
 {
   "brand": "Owl Industries",
-  "agentCnt": 10,
+  "agentCnt": 20,
   "queueFilterProp": "topic",
   "queueWorkerProps": [
     "routing.skills"
@@ -9,10 +9,12 @@
     "arrivalGap": {
       "dataType": "number",
       "expr": "range",
-      "min": 5,
-      "max": 10,
+      "min": 3,
+      "max": 5,
       "instances": [
         {
+          "entity": "system",
+          "phase": "arrive",
           "curve": "uniform"
         }
       ]
@@ -24,6 +26,21 @@
       "max": 60,
       "instances": [
         {
+          "entity": "system",
+          "phase": "arrive",
+          "curve": "uniform"
+        }
+      ]
+    },
+    "waitTime": {
+      "dataType": "number",
+      "expr": "range",
+      "min": 0,
+      "max": 60,
+      "instances": [
+        {
+          "entity": "tasks",
+          "phase": "arrive",
           "curve": "uniform"
         }
       ]
@@ -35,6 +52,8 @@
       "max": 45,
       "instances": [
         {
+          "entity": "tasks",
+          "phase": "complete",
           "curve": "bell"
         }
       ]
@@ -46,7 +65,34 @@
       "max": 25,
       "instances": [
         {
+          "entity": "tasks",
+          "phase": "complete",
           "curve": "bell"
+        }
+      ]
+    },
+    "csat": {
+      "dataType": "integer",
+      "expr": "range",
+      "min": 1,
+      "max": 10,
+      "instances": [
+        {
+          "entity": "tasks",
+          "phase": "complete",
+          "curve": "bell",
+          "influences": [
+            {
+              "factor": "waitTime.waitTime",
+              "effect": "shift",
+              "amount": "-0.10"
+            },
+            {
+              "factor": "talkTime.talkTime",
+              "effect": "shift",
+              "amount": "-0.05"
+            }
+          ]
         }
       ]
     },
@@ -59,15 +105,16 @@
       ],
       "instances": [
         {
+          "entity": "tasks",
           "valueProps": [
             {
-              "portion": 0.4
+              "portion": 0.5
             },
             {
               "portion": 0.3
             },
             {
-              "portion": 0.3
+              "portion": 0.2
             }
           ]
         }
@@ -83,22 +130,24 @@
       ],
       "instances": [
         {
+          "entity": "workers",
+          "phase": "activity",
           "valueProps": [
             {
-              "baseDur": 60,
-              "portion": 0.75
+              "baseDur": 90,
+              "portion": 0.25
             },
             {
               "baseDur": 15,
-              "portion": 0.05
+              "portion": 0.15
             },
             {
               "baseDur": 30,
-              "portion": 0.10
+              "portion": 0.35
             },
             {
               "baseDur": 120,
-              "portion": 0.10
+              "portion": 0.25
             }
           ]
         }
@@ -107,17 +156,21 @@
     "topic": {
       "expr": "enum",
       "values": [
-        "Sales",
-        "Service",
-        "Support"
+        "Checking",
+        "CreditCard",
+        "Mortgage",
+        "OtherLoans"
       ],
       "instances": [
         {
-          "target": "task",
-          "phase": "arrival",
+          "entity": "tasks",
+          "phase": "arrive",
           "valueProps": [
             {
-              "portion": 0.40
+              "portion": 0.20
+            },
+            {
+              "portion": 0.20
             },
             {
               "portion": 0.35
@@ -128,12 +181,15 @@
           ]
         },
         {
-          "target": "worker",
-          "name": "routing.skills",
+          "entity": "workers",
+          "instName": "routing.skills",
           "valueCnt": 2,
           "valueProps": [
             {
-              "portion": 0.40
+              "portion": 0.20
+            },
+            {
+              "portion": 0.20
             },
             {
               "portion": 0.35
@@ -145,25 +201,30 @@
         }
       ]
     },
-    "lang": {
+    "intent": {
       "expr": "enum",
       "values": [
-        "en-us",
-        "en-gb",
-        "sp-es"
+        "Check account balance",
+        "Check payment clearance",
+        "Change password",
+        "Inquire on rates"
       ],
       "instances": [
         {
-          "target": "worker",
+          "entity": "tasks",
+          "phase": "arrive",
           "valueProps": [
             {
-              "portion": 0.33
+              "portion": 0.20
             },
             {
-              "portion": 0.33
+              "portion": 0.20
             },
             {
-              "portion": 0.34
+              "portion": 0.35
+            },
+            {
+              "portion": 0.25
             }
           ]
         }

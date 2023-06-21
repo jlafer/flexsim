@@ -1,7 +1,7 @@
 const Ajv = require('ajv');
 const R = require('ramda');
 
-const { findObjInList } = require('./util');
+const { findObjInList, sortPropsByFactors } = require('./util');
 
 const schema = {
   $id: 'http://twilio.com/schemas/flexsim/domain.json',
@@ -57,25 +57,30 @@ const propDefnSchema = {
           items: {
             type: 'object',
             properties: {
-              target: {
+              entity: {
                 type: 'string',
-                enum: ['system', 'task', 'worker'],
+                enum: ['system', 'tasks', 'workers'],
                 default: 'system'
               },
-              name: { type: 'string' },
-              scheme: {
-                type: 'string',
-                enum: ['independent', 'functional'],
-                default: 'independent'
-              },
+              instName: { type: 'string' },
               phase: {
                 type: 'string',
-                enum: ['arrival', 'assignment', 'completion']
+                enum: ['deploy', 'activity', 'arrive', 'assign', 'complete']
               },
               curve: {
                 type: 'string',
                 enum: ['uniform', 'bell'],
                 default: 'uniform'
+              },
+              influences: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    factor: { type: 'string' },
+                    amount: { type: 'number' }
+                  }
+                }
               },
               valueCnt: {
                 type: 'integer',
@@ -95,11 +100,11 @@ const propDefnSchema = {
                 items: {
                   type: 'object',
                   properties: {
-                    source: { type: 'string' },
+                    factor: { type: 'string' },
                     effect: {
                       type: 'string',
-                      enum: ['skew', 'focus'],
-                      default: 'skew'
+                      enum: ['shift', 'skew', 'focus'],
+                      default: 'shift'
                     },
                     amount: { type: 'number' }
                   }
@@ -161,12 +166,10 @@ function fillMissingPropFields(prop) {
     prop.dataType = 'string';
   if (prop.expr === 'enum' && (!prop.values || prop.values.length === 0))
     throw new Error(`property ${name} has expr=enum but no values specified`);
-  if (prop.expr === 'range') {
-    if (!prop.min)
-      prop.min = 0;
-    if (!prop.max)
-      prop.max = 1;
-  }
+  if (!prop.min)
+    prop.min = 0;
+  if (!prop.max)
+    prop.max = 1;
   if (!prop.instances)
     throw new Error(`property ${name} has no instances specified`);
   prop.instances.forEach(fillMissingInstanceFields(prop));
@@ -174,21 +177,24 @@ function fillMissingPropFields(prop) {
 
 const fillMissingInstanceFields = (prop) =>
   inst => {
-    if (!inst.target) {
-      inst.target = 'task';
-    }
-    if (inst.target === 'task') {
-      if (!inst.phase)
-        inst.phase = 'arrival';
-    }
-    if (!inst.scheme)
-      inst.scheme = 'independent';
+    if (!inst.instName)
+      inst.instName = prop.name;
+    if (!inst.influences)
+      inst.influences = [];
+    if (!inst.entity)
+      inst.entity = 'tasks';
+    if (inst.entity === 'tasks' && !inst.phase)
+      inst.phase = 'arrive';
+    if (inst.entity === 'workers' && !inst.phase)
+      inst.phase = 'deploy';
+    if (inst.entity === 'system' && !inst.phase)
+      inst.phase = 'system';
     if (!inst.curve)
       inst.curve = (prop.expr === 'enum') ? 'uniform' : 'bell';
     if (!inst.valueCnt)
       inst.valueCnt = 1;
     if (prop.expr === 'enum' && !inst.valueProps)
-      throw new Error(`property ${name} has instance with no valueProps specified`);
+      throw new Error(`property ${prop.name} has instance with no valueProps specified`);
   }
 
 const objDictToObjArr = (dictByName) => {
@@ -216,43 +222,32 @@ function getStdProps(props) {
   return R.fromPairs(stdPropPairs);
 }
 
-const getAttributeProps = (target, props) => {
-  const tgtProps = R.reduce(
+const getPropInstances = (props) => {
+  const tgtPropInstances = R.reduce(
     (accum, testProp) => {
-      if (testProp.instances) {
-        const tgtInstances = R.filter(
-          inst => inst.target === target,
+      if (testProp.instances.length > 0) {
+        const { instances, ...restOfProp } = testProp;
+        const propAndInstArr = R.map(
+          (inst) => {
+            const propAndInst = { ...restOfProp, ...inst };
+            return propAndInst;
+          },
           testProp.instances
         );
-        if (tgtInstances.length > 0) {
-          const { instances, ...restOfProp } = testProp;
-          const propAndInstArr = R.map(
-            (inst) => {
-              const propAndInst = { ...restOfProp, ...inst };
-              return propAndInst;
-            },
-            tgtInstances
-          );
-          return [...accum, ...propAndInstArr];
-        }
+        return [...accum, ...propAndInstArr];
       }
       return accum
     },
     [],
     props
   );
-  return tgtProps;
+  return sortPropsByFactors(tgtPropInstances);
 };
 
-const getSingleProp = (name, props) => {
-  const prop = findObjInList('name', name, props);
-  const { instances, ...rest } = prop;
-  const inst = instances[0];
-  return { ...rest, ...inst };
-};
+const getSinglePropInstance = (name, propInstances) => findObjInList('instName', name, propInstances);
 
 module.exports = {
   checkAndFillDomain,
-  getAttributeProps,
-  getSingleProp
+  getPropInstances,
+  getSinglePropInstance
 }

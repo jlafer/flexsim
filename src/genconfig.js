@@ -2,10 +2,10 @@ require("dotenv").config();
 const R = require('ramda');
 
 const { parseAndValidateArgs } = require('./helpers/args');
-const { calcCustomAttrs } = require('./helpers/calcs');
-const { checkAndFillDomain, getAttributeProps } = require('./helpers/schema');
+const { calcPropsValues } = require('./helpers/calcs');
+const { checkAndFillDomain, getPropInstances } = require('./helpers/schema');
 const { readJsonFile, writeToJsonFile } = require('./helpers/files');
-const { localeToFakerModule } = require('./helpers/util');
+const { findObjInList, localeToFakerModule, filterPropInstancesByEntity } = require('./helpers/util');
 
 async function run() {
   const args = getArgs();
@@ -17,62 +17,55 @@ async function run() {
     console.error('json validation errors:', result);
     throw new Error('validation of json failed');
   }
-  const context = { args, domain: result };
-  const cfg = genConfiguration(context);
-  await writeCfgToCfgdir(cfgdir, cfg);
+  const context = { args, cfg: {}, domain: result, propValues: { workers: {}, tasks: {} } };
+  context.cfg.metadata = R.pick(
+    ['brand', 'agentCnt', 'queueFilterProp', 'queueWorkerProps', 'props'],
+    context.domain
+  );
+
+  context.propInstances = getPropInstances(context.cfg.metadata.props);
+  genConfiguration(context);
+  await writeCfgToCfgdir(cfgdir, context.cfg);
 }
 
 run();
 
 function genConfiguration(context) {
-  const { args, domain } = context;
-  const cfg = {};
-  cfg.metadata = R.pick(
-    ['brand', 'agentCnt', 'queueFilterProp', 'queueWorkerProps', 'props'],
-    domain
-  );
-  cfg.metadata.workerAttributes = getAttributeProps('worker', cfg.metadata.props);
-  cfg.metadata.taskAttributes = getAttributeProps('task', cfg.metadata.props);
-  cfg.workers = genWorkers(cfg.metadata, args.locale);
-  cfg.queues = genQueues(cfg.metadata);
-  cfg.workflow = genWorkflow(cfg.metadata);
-  return cfg;
+  const { cfg } = context;
+  cfg.workers = genWorkers(context);
+  cfg.queues = genQueues(context);
+  cfg.workflow = genWorkflow(context);
 }
 
-function genQueues(metadata) {
-  const { queueWorkerProps, workerAttributes } = metadata;
-  const queuePropName = queueWorkerProps[0];
-  const propAndInst = workerAttributes.find(a => a.name === queuePropName);
-  const { valueCnt, values } = propAndInst;
-  const queues = values.map(propToQueue(queuePropName, valueCnt));
-  return queues;
-}
-
-const propToQueue = (attrName, valueCnt) =>
-  (attrValue) => {
-    const expr = (valueCnt === 1)
-      ? `${attrName} == '${attrValue}'`
-      : `${attrName} HAS '${attrValue}'`;
-    const data = {
-      targetWorkers: expr,
-      friendlyName: attrValue
-    }
-    return data;
-  }
-
-function genWorkers(metadata, locale) {
-  const { agentCnt, workerAttributes } = metadata;
+function genWorkers(context) {
+  const { args, cfg } = context;
+  const { metadata } = cfg;
+  const { agentCnt } = metadata;
   const workers = [];
   for (let i = 0; i < agentCnt; i++) {
-    const data = makeWorker(i, workerAttributes, locale);
+    const data = makeWorker(i, context, args.locale);
     workers.push(data);
   }
   return workers;
 }
 
-const genWorkflow = (metadata) => {
-  const { brand, queueFilterProp: filterPropName, taskAttributes } = metadata;
-  const propAndInst = taskAttributes.find(a => a.name === filterPropName);
+function genQueues(context) {
+  const { cfg, propInstances } = context;
+  const { metadata } = cfg;
+  const { queueWorkerProps } = metadata;
+  const queuePropName = queueWorkerProps[0];
+  const workerAttributes = filterPropInstancesByEntity('workers', propInstances);
+  const propAndInst = workerAttributes.find(a => a.instName === queuePropName);
+  const { valueCnt, values } = propAndInst;
+  const queues = values.map(propToQueue(queuePropName, valueCnt));
+  return queues;
+}
+
+const genWorkflow = (context) => {
+  const { cfg, propInstances } = context;
+  const { metadata } = cfg;
+  const { brand, queueFilterProp: filterPropName } = metadata;
+  const propAndInst = findObjInList('instName', filterPropName, propInstances);
   const filters = propAndInst.values.map(propToFilter(filterPropName));
   const workflow = {
     friendlyName: `${brand} Workflow`,
@@ -85,6 +78,18 @@ const genWorkflow = (metadata) => {
   }
   return workflow;
 };
+
+const propToQueue = (attrName, valueCnt) =>
+  (attrValue) => {
+    const expr = (valueCnt === 1)
+      ? `${attrName} == '${attrValue}'`
+      : `${attrName} HAS '${attrValue}'`;
+    const data = {
+      targetWorkers: expr,
+      friendlyName: attrValue
+    }
+    return data;
+  }
 
 const propToFilter = (attrName) =>
   (attrValue) => {
@@ -99,12 +104,13 @@ const propToFilter = (attrName) =>
     };
   };
 
-const makeWorker = (i, workerAttributes, locale) => {
+const makeWorker = (i, context, locale) => {
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
   const fakerModule = localeToFakerModule(locale);
   const full_name = fakerModule.person.fullName();
-  let customAttrs = calcCustomAttrs(workerAttributes);
+  const valuesDescriptor = { entity: 'workers', phase: 'deploy', id: full_name };
+  let customAttrs = calcPropsValues(context, valuesDescriptor);
   if (R.hasPath(['routing', 'skills'], customAttrs)) {
     customAttrs = R.assocPath(['routing', 'levels'], {}, customAttrs);
   }

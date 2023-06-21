@@ -1,14 +1,15 @@
 require("dotenv").config();
 const express = require('express');
+const R = require('ramda');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
-const { calcActivityChange, calcValue } = require('./helpers/calcs');
+const { calcActivityChange, calcPropsValues, calcAndSaveValue } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
-const { getSingleProp } = require('./helpers/schema');
+const { getSinglePropInstance } = require('./helpers/schema');
 const { completeTask, wrapupTask } = require('./helpers/task');
-const { findObjInList, formatDt, formatSid } = require('./helpers/util');
+const { findObjInList, formatDt, formatSid, getAttributeFromJson } = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -29,25 +30,31 @@ async function init() {
   })
 
   app.post('/reservation', (req, res) => {
-    const { TaskSid, WorkerSid } = req.body;
-    const { cfg } = context;
-    const { metadata } = cfg;
-    const { props } = metadata;
+    const { TaskAge, TaskSid, WorkerSid, TaskAttributes } = req.body;
+    addPropValuesFromReservation(context, req.body);
+    const { propValues, propInstances } = context;
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
     const now = Date.now();
     console.log(formatDt(now));
+    const custName = getAttributeFromJson(TaskAttributes, 'name');
+    if (!custName) {
+      console.log(`a task ${TaskSid} with no name???`);
+    }
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
-    const talkTimeProp = getSingleProp('talkTime', props);
-    const talkTime = calcValue(talkTimeProp);
-    const wrapTimeProp = getSingleProp('wrapTime', props);
-    const wrapTime = calcValue(wrapTimeProp);
+    console.log(`    age: ${TaskAge}`);
+    const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
+    const talkTimeProp = getSinglePropInstance('talkTime', propInstances);
+    const talkTime = calcAndSaveValue(propInstances, propValues, valuesDescriptor, talkTimeProp);
+    const wrapTimeProp = getSinglePropInstance('wrapTime', propInstances);
+    const wrapTime = calcAndSaveValue(propInstances, propValues, valuesDescriptor, wrapTimeProp);
+
     setTimeout(
       function () {
         const now = Date.now();
         console.log(formatDt(now));
         console.log(`  ${friendlyName} wrapping task ${formatSid(TaskSid)}`);
-        doWrapupTask(context, TaskSid, friendlyName, wrapTime);
+        doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime);
       },
       (talkTime * 1000)
     );
@@ -61,14 +68,17 @@ async function init() {
 
 init();
 
-const doWrapupTask = async (context, TaskSid, friendlyName, wrapTime) => {
-  await wrapupTask(context, TaskSid);
+const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
+  wrapupTask(context, TaskSid);
   setTimeout(
     function () {
       const now = Date.now();
       console.log(formatDt(now));
+      const valuesDescriptor = { entity: 'tasks', phase: 'complete', id: custName };
+      const newKVs = calcPropsValues(context, valuesDescriptor);
       console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
-      completeTask(context, TaskSid);
+      completeTask(context, TaskSid, valuesDescriptor);
+      R.dissoc(TaskSid, context.tasks);
     },
     (wrapTime * 1000)
   );
@@ -124,6 +134,18 @@ async function loadTwilioResources(context) {
   context.activities = await fetchActivities(context);
   context.workers = await fetchFlexsimWorkers(context);
 }
+
+const addPropValuesFromReservation = (context, body) => {
+  const { TaskAge, TaskAttributes, TaskSid, WorkerAttributes, WorkerSid } = body;
+  const taskAttributes = JSON.parse(TaskAttributes);
+  const workerAttributes = JSON.parse(WorkerAttributes);
+  const taskData = { waitTime: TaskAge, ...taskAttributes };
+  const custName = taskData.name;
+  const workerData = { ...workerAttributes };
+  const workerName = workerData.full_name;
+  context.propValues.tasks[custName] = taskData;
+  context.propValues.workers[workerName] = workerData;
+};
 
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);

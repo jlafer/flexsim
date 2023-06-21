@@ -19,7 +19,7 @@ NOTE: Care must be taken when other tasks are being routed in the project to ens
 The agent simulator script reads the configuration files, performs a login of the `flexsim` agents and makes them Available for work. When TaskRouter assigns them a Task, they "handle" it. It can run in any Flex project that has infrastructure in sync with the configuration files. It can run in the background during the presentation of a demo using that project.
 
 ## custsim
-The customer simulator script reads the configuration files and generates Tasks that are then routed to the simulation agents. The configuration files control the arrival rate, channels, customer intents and other parameters. Most behaviors are semi-random, meaning they have targets but can vary in a pseudo-random fashion around their target.
+The customer simulator script reads the configuration files and generates Tasks that are then routed to the simulation agents. The configuration files control the arrive rate, channels, customer intents and other parameters. Most behaviors are semi-random, meaning they have targets but can vary in a pseudo-random fashion around their target.
 
 ## Configuration
 The system has four execution modes: configuration generation, infrastructure deployment, simulation and (as needed) cleanup. The configuration generation mode uses a combination of default values and user-supplied inputs to generate a set of JSON configuration files. The deployment, simulation and cleanup modules then read the configuration files when executing against a Flex project.
@@ -34,7 +34,7 @@ The default values can then be overridden by the user using a combination of a `
 ### domain.json
 For saving a custom simulation domain description, the user can provision a file, named `domain.json`. The `genconfig` script can read this file and generate configuration files based on the description there.  This allows the user to control nearly every aspect of the resulting simulation: tasks, channels, agent counts, customer intents, routing criteria, handle times, agent activities, etc.
 
-The format of the file is not yet documented in this README. However, you can inspect the `src/helpers/schema.js` file to see a JSON Schema definition for the file. You can also inspect the `domain.json` file in the project root folder for an example. These two should get the early adopter started. :-)
+The format of the file is not yet documented in this README. However, you can inspect the `src/helpers/schema.js` file to see a JSON Schema definition for the file. You can also inspect the `domain.json` file in the `domain` folder for an example. These two should get the early adopter started. :-)
 
 ### Command-line Options
 Each `flexsim` script supports a set of command-line options, which can be used to make dynamic changes to its operation. Most of these relate to Flex credentials, file locations, task volumes, agent counts and other quantitative aspects of the simulation.

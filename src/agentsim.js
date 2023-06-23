@@ -4,12 +4,14 @@ const R = require('ramda');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
-const { calcActivityChange, calcPropsValues, calcAndSaveValue } = require('./helpers/calcs');
+const { calcActivityChange, calcPropsValues } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { getSinglePropInstance } = require('./helpers/schema');
 const { completeTask, wrapupTask } = require('./helpers/task');
-const { findObjInList, formatDt, formatSid, getAttributeFromJson } = require('./helpers/util');
+const {
+  findObjInList, formatDt, formatSid, getAttributeFromJson, getPropValue
+} = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -39,15 +41,16 @@ async function init() {
     console.log(formatDt(now));
     const custName = getAttributeFromJson(TaskAttributes, 'name');
     if (!custName) {
-      console.log(`a task ${TaskSid} with no name???`);
+      throw new Error(`a task ${TaskSid} with no name???`);
     }
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
     console.log(`    age: ${TaskAge}`);
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
+    calcPropsValues(context, valuesDescriptor);
     const talkTimeProp = getSinglePropInstance('talkTime', propInstances);
-    const talkTime = calcAndSaveValue(propInstances, propValues, valuesDescriptor, talkTimeProp);
+    const talkTime = getPropValue(propValues, valuesDescriptor.id, talkTimeProp);
     const wrapTimeProp = getSinglePropInstance('wrapTime', propInstances);
-    const wrapTime = calcAndSaveValue(propInstances, propValues, valuesDescriptor, wrapTimeProp);
+    const wrapTime = getPropValue(propValues, valuesDescriptor.id, wrapTimeProp);
 
     setTimeout(
       function () {
@@ -75,7 +78,7 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
       const now = Date.now();
       console.log(formatDt(now));
       const valuesDescriptor = { entity: 'tasks', phase: 'complete', id: custName };
-      const newKVs = calcPropsValues(context, valuesDescriptor);
+      calcPropsValues(context, valuesDescriptor);
       console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
       completeTask(context, TaskSid, valuesDescriptor);
       R.dissoc(TaskSid, context.tasks);
@@ -136,7 +139,7 @@ async function loadTwilioResources(context) {
 }
 
 const addPropValuesFromReservation = (context, body) => {
-  const { TaskAge, TaskAttributes, TaskSid, WorkerAttributes, WorkerSid } = body;
+  const { TaskAge, TaskAttributes, WorkerAttributes } = body;
   const taskAttributes = JSON.parse(TaskAttributes);
   const workerAttributes = JSON.parse(WorkerAttributes);
   const taskData = { waitTime: TaskAge, ...taskAttributes };

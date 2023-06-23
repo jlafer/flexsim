@@ -15,13 +15,25 @@ const getAttributeFromJson = (jsonStr, key) => {
 
 const getPropValues = (ctx, valuesDescriptor) => {
   const { propInstances, propValues } = ctx;
-  const tgtPropInstances = filterPropInstancesByEntity(valuesDescriptor.entity, propInstances);
+  const entPropInstances = filterPropInstancesByEntity(valuesDescriptor.entity, propInstances);
   const values = R.reduce(
     getAndAccumValue(propValues, valuesDescriptor.id),
     {},
-    tgtPropInstances
+    entPropInstances
   );
   return values;
+};
+
+const getAttributes = (ctx, valuesDescriptor) => {
+  const { propInstances, propValues } = ctx;
+  const attrPropInstances = filterPropInstancesByEntity(valuesDescriptor.entity, propInstances)
+    .filter(propAndInst => propAndInst.isAttribute);
+  const attributes = R.reduce(
+    getAndAccumValue(propValues, valuesDescriptor.id),
+    {},
+    attrPropInstances
+  );
+  return attributes;
 };
 
 const getAndAccumValue = R.curry((propValues, id, accum, propAndInst) => {
@@ -31,6 +43,14 @@ const getAndAccumValue = R.curry((propValues, id, accum, propAndInst) => {
   const value = R.path(valuePath, propValues);
   return R.assocPath(keyPath, value, accum);
 });
+
+const getPropValue = (propValues, id, propAndInst) => {
+  const { entity, instName } = propAndInst;
+  const keyPath = R.split('.', instName);
+  const valuePath = R.concat([entity, id], keyPath);
+  const value = R.path(valuePath, propValues);
+  return value;
+};
 
 const hasAttributeValue = R.curry((key, val, obj) => R.propEq(val, key, obj.attributes));
 
@@ -155,6 +175,8 @@ module.exports = {
   formatDt,
   formatSid,
   getAttributeFromJson,
+  getAttributes,
+  getPropValue,
   getPropValues,
   hasAttributeValue,
   localeToFakerModule,

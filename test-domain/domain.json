@@ -1,51 +1,11 @@
 {
   "brand": "ACME",
-  "agentCnt": 7,
+  "agentCnt": 10,
   "queueFilterProp": "topic",
   "queueWorkerProps": [
     "routing.skills"
   ],
   "props": {
-    "arrivalGap": {
-      "dataType": "number",
-      "expr": "range",
-      "min": 3,
-      "max": 5,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "curve": "uniform"
-        }
-      ]
-    },
-    "abandonTime": {
-      "dataType": "number",
-      "expr": "range",
-      "min": 15,
-      "max": 60,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "curve": "uniform"
-        }
-      ]
-    },
-    "waitTime": {
-      "dataType": "number",
-      "expr": "range",
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "assign",
-          "isAttribute": false,
-          "calculation": "custom"
-        }
-      ]
-    },
     "talkTime": {
       "dataType": "number",
       "expr": "range",
@@ -94,66 +54,6 @@
               "factor": "talkTime.talkTime",
               "effect": "shift",
               "amount": "-0.05"
-            }
-          ]
-        }
-      ]
-    },
-    "channel": {
-      "expr": "enum",
-      "values": [
-        "voice",
-        "chat",
-        "sms"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "valueProps": [
-            {
-              "portion": 0.5
-            },
-            {
-              "portion": 0.3
-            },
-            {
-              "portion": 0.2
-            }
-          ]
-        }
-      ]
-    },
-    "activity": {
-      "expr": "enum",
-      "values": [
-        "Available",
-        "Busy",
-        "Break",
-        "Lunch"
-      ],
-      "instances": [
-        {
-          "entity": "workers",
-          "phase": "activity",
-          "isAttribute": false,
-          "valueProps": [
-            {
-              "baseDur": 90,
-              "portion": 0.25
-            },
-            {
-              "baseDur": 15,
-              "portion": 0.15
-            },
-            {
-              "baseDur": 30,
-              "portion": 0.35
-            },
-            {
-              "baseDur": 120,
-              "portion": 0.25
             }
           ]
         }

@@ -1,9 +1,8 @@
 const R = require('ramda');
 
-const { calcPropsValues, calcAndSaveValue } = require('./calcs');
 const { getSinglePropInstance } = require('./schema');
 const {
-  findObjInList, formatSid, getPropValues, hasAttributeValue, localeToFakerModule
+  findObjInList, formatSid, getAttributes, getPropValue, hasAttributeValue
 } = require('./util');
 
 const fetchTask = async (ctx, sid) => {
@@ -26,33 +25,27 @@ const fetchFlexsimTasks = async (ctx) => {
   return tasks;
 };
 
-const submitTask = async (ctx) => {
+const submitTask = async (ctx, valuesDescriptor) => {
   const { args, client, workflow, channels, propInstances, propValues } = ctx;
-  const { locale, wrkspc } = args;
-  const fakerModule = localeToFakerModule(locale);
-  const name = fakerModule.person.fullName();
-  if (!name) {
-    console.log('fakerModule:', fakerModule);
-  }
-  const valuesDescriptor = { entity: 'tasks', phase: 'arrive', id: name };
+  const { wrkspc } = args;
   const channelProp = getSinglePropInstance('channel', propInstances);
-  const channelName = calcAndSaveValue(propInstances, propValues, valuesDescriptor, channelProp);
+  const channelName = getPropValue(propValues, valuesDescriptor.id, channelProp);
   const taskChannel = findObjInList('uniqueName', channelName, channels);
-  const customAttrs = calcPropsValues(ctx, valuesDescriptor);
+  const customAttrs = getAttributes(ctx, valuesDescriptor);
   const task = await client.taskrouter.v1.workspaces(wrkspc).tasks
     .create(
       {
         taskChannel: taskChannel.sid,
         attributes: JSON.stringify({
           source: 'flexsim',
-          name,
+          name: valuesDescriptor.id,
           ...customAttrs
         }),
         workflowSid: workflow.sid
       }
     );
   const abandonTimeProp = getSinglePropInstance('abandonTime', propInstances);
-  const abandonTime = calcAndSaveValue(propInstances, propValues, valuesDescriptor, abandonTimeProp);
+  const abandonTime = getPropValue(propValues, valuesDescriptor.id, abandonTimeProp);
   setTimeout(
     function () {
       cancelTask(ctx, task.sid);
@@ -71,24 +64,37 @@ const cancelTask = async (ctx, taskSid) => {
 };
 
 const wrapupTask = (ctx, taskSid) => {
-  setTaskStatus('wrapping', ctx, taskSid, null);
+  setTaskStatus('wrapping', ctx, taskSid);
 };
 
-const completeTask = (ctx, taskSid, valuesDescriptor) => {
-  const attributes = getPropValues(ctx, valuesDescriptor);
-  setTaskStatus('completed', ctx, taskSid, attributes);
+const completeTask = async (ctx, taskSid, valuesDescriptor) => {
+  const attributes = getAttributes(ctx, valuesDescriptor);
+  let task = await setTaskStatus('completed', ctx, taskSid);
+  console.log(`task completion for ${task.sid}`);
+  task = await updateTaskAttributes(ctx, taskSid, attributes);
+  console.log(`${task.sid} now has attributes:`, task.attributes);
 };
 
-const setTaskStatus = (status, ctx, taskSid, attributes) => {
+const updateTaskAttributes = (ctx, taskSid, attributes) => {
+  const { args, client } = ctx;
+  console.log(`${taskSid}: adding attributes:`, attributes);
+  return client.taskrouter.v1.workspaces(args.wrkspc).tasks(taskSid)
+    .update({ attributes: JSON.stringify(attributes) })
+    .then(task => {
+      return task;
+    })
+    .catch(err => {
+      console.log(`ERROR: update of task ${taskSid} failed:`, err);
+    })
+};
+
+const setTaskStatus = (status, ctx, taskSid) => {
   const { args, client } = ctx;
   const data = { assignmentStatus: status, reason: 'work is done' };
-  if (!!attributes)
-    data.attributes = JSON.stringify(attributes);
-
-  client.taskrouter.v1.workspaces(args.wrkspc).tasks(taskSid)
+  return client.taskrouter.v1.workspaces(args.wrkspc).tasks(taskSid)
     .update(data)
     .then(task => {
-      //console.log(`at task ${status}, ${taskSid} has attributes:`, task.attributes);
+      return task
     })
     .catch(err => {
       console.log(`ERROR: complete of task ${taskSid} failed:`, err);

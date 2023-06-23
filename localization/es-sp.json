@@ -1,0 +1,229 @@
+    {
+      "brand": "Industrias del Bùho",
+      "agentCnt": 20,
+      "queueFilterProp": "topic",
+      "queueWorkerProps": [
+        "routing.skills"
+      ],
+      "props": {
+        "arrivalGap": {
+          "dataType": "number",
+          "expr": "range",
+          "min": 3,
+          "max": 5,
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "arrive",
+              "curve": "uniform"
+            }
+          ]
+        },
+        "abandonTime": {
+          "dataType": "number",
+          "expr": "range",
+          "min": 15,
+          "max": 60,
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "arrive",
+              "curve": "uniform"
+            }
+          ]
+        },
+        "waitTime": {
+          "dataType": "number",
+          "expr": "range",
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "assign",
+              "isAttribute": false,
+              "calculation": "custom"
+            }
+          ]
+        },
+        "talkTime": {
+          "dataType": "number",
+          "expr": "range",
+          "min": 15,
+          "max": 45,
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "assign",
+              "isAttribute": false,
+              "curve": "bell"
+            }
+          ]
+        },
+        "wrapTime": {
+          "dataType": "number",
+          "expr": "range",
+          "min": 5,
+          "max": 25,
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "assign",
+              "isAttribute": false,
+              "curve": "bell"
+            }
+          ]
+        },
+        "channel": {
+          "expr": "enum",
+          "values": [
+            "voice",
+            "chat",
+            "sms"
+          ],
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "arrive",
+              "isAttribute": false,
+              "valueProps": [
+                {
+                  "portion": 0.5
+                },
+                {
+                  "portion": 0.3
+                },
+                {
+                  "portion": 0.2
+                }
+              ]
+            }
+          ]
+        },
+        "activity": {
+          "expr": "enum",
+          "values": [
+            "Available",
+            "Busy",
+            "Break",
+            "Lunch"
+          ],
+          "instances": [
+            {
+              "entity": "workers",
+              "phase": "activity",
+              "valueProps": [
+                {
+                  "baseDur": 90,
+                  "portion": 0.25
+                },
+                {
+                  "baseDur": 15,
+                  "portion": 0.15
+                },
+                {
+                  "baseDur": 30,
+                  "portion": 0.35
+                },
+                {
+                  "baseDur": 120,
+                  "portion": 0.25
+                }
+              ]
+            }
+          ]
+        },
+        "topic": {
+          "expr": "enum",
+          "values": [
+            "Sales",
+            "Service",
+            "Support"
+          ],
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "arrive",
+              "valueProps": [
+                {
+                  "portion": 0.20
+                },
+                {
+                  "portion": 0.30
+                },
+                {
+                  "portion": 0.40
+                }
+              ]
+            },
+            {
+              "entity": "workers",
+              "instName": "routing.skills",
+              "valueCnt": 2,
+              "valueProps": [
+                {
+                  "portion": 0.20
+                },
+                {
+                  "portion": 0.30
+                },
+                {
+                  "portion": 0.40
+                }
+              ]
+            }
+          ]
+        },
+        "intent": {
+          "expr": "enum",
+          "values": [
+            "Check Account Balance",
+            "Check Payment Clearance",
+            "Change Password",
+            "Billing Question",
+            "Refund Request",
+            "Check Delivery Date",
+            "Cancel Order",
+            "Update Order",
+            "Pricing Inquiry",
+            "Product Inquiry"
+          ],
+          "instances": [
+            {
+              "entity": "tasks",
+              "phase": "arrive",
+              "valueProps": [
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                },
+                {
+                  "portion": 0.10
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }

@@ -59,14 +59,19 @@ const propDefnSchema = {
             properties: {
               entity: {
                 type: 'string',
-                enum: ['system', 'tasks', 'workers'],
-                default: 'system'
+                enum: ['tasks', 'workers'],
+                default: 'tasks'
               },
               instName: { type: 'string' },
               phase: {
                 type: 'string',
                 enum: ['deploy', 'activity', 'arrive', 'assign', 'complete']
               },
+              calculation: {
+                type: 'string',
+                enum: ['standard', 'custom']
+              },
+              isAttribute: { type: 'boolean' },
               curve: {
                 type: 'string',
                 enum: ['uniform', 'bell'],
@@ -141,7 +146,7 @@ const mergeDomainIntoDefaults = (defaults, domain) => {
   const { props: defaultProps, ...defaultKVs } = defaults;
   const { props: domainProps, ...domainKVs } = domain;
 
-  // first, merge KVs
+  // first, merge KVs (all of the peers to props)
   const finalKVs = R.mergeRight(defaultKVs, domainKVs);
 
   // next, remove any non-standard props from the defaults
@@ -179,6 +184,10 @@ const fillMissingInstanceFields = (prop) =>
   inst => {
     if (!inst.instName)
       inst.instName = prop.name;
+    if (!inst.calculation)
+      inst.calculation = 'standard';
+    if (inst.isAttribute == undefined)
+      inst.isAttribute = true;
     if (!inst.influences)
       inst.influences = [];
     if (!inst.entity)
@@ -187,8 +196,6 @@ const fillMissingInstanceFields = (prop) =>
       inst.phase = 'arrive';
     if (inst.entity === 'workers' && !inst.phase)
       inst.phase = 'deploy';
-    if (inst.entity === 'system' && !inst.phase)
-      inst.phase = 'system';
     if (!inst.curve)
       inst.curve = (prop.expr === 'enum') ? 'uniform' : 'bell';
     if (!inst.valueCnt)
@@ -204,7 +211,7 @@ const objDictToObjArr = (dictByName) => {
 };
 
 const stdPropNames = [
-  'abandonTime', 'activity', 'arrivalGap', 'channel', 'talkTime', 'wrapTime'
+  'abandonTime', 'activity', 'arrivalGap', 'channel', 'talkTime', 'waitTime', 'wrapTime'
 ];
 
 const filterStdProps = ([name, _prop]) => stdPropNames.includes(name);

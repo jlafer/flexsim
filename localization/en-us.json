@@ -13,8 +13,9 @@
       "max": 5,
       "instances": [
         {
-          "entity": "system",
+          "entity": "tasks",
           "phase": "arrive",
+          "isAttribute": false,
           "curve": "uniform"
         }
       ]
@@ -26,8 +27,9 @@
       "max": 60,
       "instances": [
         {
-          "entity": "system",
+          "entity": "tasks",
           "phase": "arrive",
+          "isAttribute": false,
           "curve": "uniform"
         }
       ]
@@ -35,13 +37,12 @@
     "waitTime": {
       "dataType": "number",
       "expr": "range",
-      "min": 0,
-      "max": 60,
       "instances": [
         {
           "entity": "tasks",
-          "phase": "arrive",
-          "curve": "uniform"
+          "phase": "assign",
+          "isAttribute": false,
+          "calculation": "custom"
         }
       ]
     },
@@ -53,7 +54,8 @@
       "instances": [
         {
           "entity": "tasks",
-          "phase": "complete",
+          "phase": "assign",
+          "isAttribute": false,
           "curve": "bell"
         }
       ]
@@ -66,33 +68,9 @@
       "instances": [
         {
           "entity": "tasks",
-          "phase": "complete",
+          "phase": "assign",
+          "isAttribute": false,
           "curve": "bell"
-        }
-      ]
-    },
-    "csat": {
-      "dataType": "integer",
-      "expr": "range",
-      "min": 1,
-      "max": 10,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "complete",
-          "curve": "bell",
-          "influences": [
-            {
-              "factor": "waitTime.waitTime",
-              "effect": "shift",
-              "amount": "-0.10"
-            },
-            {
-              "factor": "talkTime.talkTime",
-              "effect": "shift",
-              "amount": "-0.05"
-            }
-          ]
         }
       ]
     },
@@ -106,6 +84,8 @@
       "instances": [
         {
           "entity": "tasks",
+          "phase": "arrive",
+          "isAttribute": false,
           "valueProps": [
             {
               "portion": 0.5
@@ -132,6 +112,7 @@
         {
           "entity": "workers",
           "phase": "activity",
+          "isAttribute": false,
           "valueProps": [
             {
               "baseDur": 90,
@@ -156,10 +137,9 @@
     "topic": {
       "expr": "enum",
       "values": [
-        "Checking",
-        "CreditCard",
-        "Mortgage",
-        "OtherLoans"
+        "Sales",
+        "Service",
+        "Support"
       ],
       "instances": [
         {
@@ -170,13 +150,10 @@
               "portion": 0.20
             },
             {
-              "portion": 0.20
+              "portion": 0.30
             },
             {
-              "portion": 0.35
-            },
-            {
-              "portion": 0.25
+              "portion": 0.40
             }
           ]
         },
@@ -189,13 +166,10 @@
               "portion": 0.20
             },
             {
-              "portion": 0.20
+              "portion": 0.30
             },
             {
-              "portion": 0.35
-            },
-            {
-              "portion": 0.25
+              "portion": 0.40
             }
           ]
         }
@@ -204,10 +178,16 @@
     "intent": {
       "expr": "enum",
       "values": [
-        "Check account balance",
-        "Check payment clearance",
-        "Change password",
-        "Inquire on rates"
+        "Check Account Balance",
+        "Check Payment Clearance",
+        "Change Password",
+        "Billing Question",
+        "Refund Request",
+        "Check Delivery Date",
+        "Cancel Order",
+        "Update Order",
+        "Pricing Inquiry",
+        "Product Inquiry"
       ],
       "instances": [
         {
@@ -215,16 +195,34 @@
           "phase": "arrive",
           "valueProps": [
             {
-              "portion": 0.20
+              "portion": 0.10
             },
             {
-              "portion": 0.20
+              "portion": 0.10
             },
             {
-              "portion": 0.35
+              "portion": 0.10
             },
             {
-              "portion": 0.25
+              "portion": 0.10
+            },
+            {
+              "portion": 0.10
+            },
+            {
+              "portion": 0.10
+            },
+            {
+              "portion": 0.10
+            },
+            {
+              "portion": 0.10
+            },
+            {
+              "portion": 0.10
+            },
+            {
+              "portion": 0.10
             }
           ]
         }

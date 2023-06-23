@@ -5,7 +5,8 @@ const { filterPropInstances } = require('./util');
 
 function calcPropsValues(ctx, valuesDescriptor) {
   const { propInstances, propValues } = ctx;
-  const instancesToCalc = filterPropInstances(valuesDescriptor, propInstances);
+  const instancesToCalc = filterPropInstances(valuesDescriptor, propInstances)
+    .filter(propAndInst => propAndInst.calculation === 'standard');
   const values = R.reduce(
     calcAndAccumValue(propInstances, propValues, valuesDescriptor),
     {},
@@ -60,11 +61,15 @@ const calcScalarValue = (propInstances, propValues, valuesDescriptor, propAndIns
 }
 
 const calcRangeValue = (propInstances, propValues, valuesDescriptor, propAndInst) => {
-  const { dataType, curve } = propAndInst;
+  const { dataType, curve, max, min } = propAndInst;
   const decValue = (curve == 'uniform')
     ? calcUniformValue(propAndInst)
     : calcBellValue(propInstances, propValues, valuesDescriptor, propAndInst);
-  const value = (dataType === 'integer') ? Math.round(decValue) : decValue;
+  let value = (dataType === 'integer') ? Math.round(decValue) : decValue;
+  if (value > max)
+    value = max;
+  if (value < min)
+    value = min;
   return value;
 };
 
@@ -168,6 +173,5 @@ const randomSkewNormal = (mean, stddev, skew = 0) => {
 
 module.exports = {
   calcActivityChange,
-  calcPropsValues,
-  calcAndSaveValue
+  calcPropsValues
 }

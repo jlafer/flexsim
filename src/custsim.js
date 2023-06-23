@@ -1,13 +1,13 @@
 require("dotenv").config();
 
 const {parseAndValidateArgs} = require('./helpers/args');
-const { calcAndSaveValue } = require('./helpers/calcs');
+const { calcPropsValues } = require('./helpers/calcs');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { readJsonFile } = require('./helpers/files');
 const { getSinglePropInstance } = require('./helpers/schema');
 const {submitTask} = require('./helpers/task');
-const { delay, formatDt, formatSid } = require('./helpers/util');
+const { delay, formatDt, formatSid, getPropValue, localeToFakerModule } = require('./helpers/util');
 const { fetchWorkflow } = require('./helpers/workflow');
 
 async function run() {
@@ -18,14 +18,16 @@ async function run() {
   const { propValues, propInstances } = context;
   await loadTwilioResources(context);
   console.log(`read workflow: ${context.workflow.friendlyName}`);
+  const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
   let now = Date.now();
   while (now < context.simStopTS) {
-    const task = await submitTask(context);
+    const fakerModule = localeToFakerModule(args.locale);
+    valuesDescriptor.id = fakerModule.person.fullName();
+    calcPropsValues(context, valuesDescriptor);
+    const task = await submitTask(context, valuesDescriptor);
     console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
-    const valuesDescriptor = { entity: 'tasks', phase: 'arrive', id: task.attributes.name };
     const propAndInst = getSinglePropInstance('arrivalGap', propInstances);
-    // TODO arrivalGap does not need to be saved
-    const arrivalGap = calcAndSaveValue(propInstances, propValues, valuesDescriptor, propAndInst);
+    const arrivalGap = getPropValue(propValues, valuesDescriptor.id, propAndInst);
     await delay(arrivalGap * 1000);
     now = Date.now();
   }

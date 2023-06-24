@@ -141,7 +141,9 @@ async function writeCfgToCfgdir(cfgdir, cfg) {
 async function readDomainData(args) {
   const { domaindir, locale } = args;
   const defaults = await readJsonFile(`localization/${locale}.json`);
-  const domain = await readJsonFile(`${domaindir}/domain.json`);
+  let domain;
+  if (!!domaindir)
+    domain = await readJsonFile(`${domaindir}/domain.json`);
   return [defaults, domain];
 }
 
@@ -151,7 +153,6 @@ function getArgs() {
     required: []
   });
   const { } = process.env;
-  args.domaindir = args.domaindir || 'domain';
   args.locale = args.locale || 'en-us';
   const { domaindir, cfgdir, locale } = args;
   console.log('domaindir:', domaindir);

@@ -106,35 +106,6 @@
           ]
         }
       ]
-    },
-    "intent": {
-      "expr": "enum",
-      "values": [
-        "Check account balance",
-        "Check payment clearance",
-        "Change password",
-        "Inquire on rates"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "valueProps": [
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.35
-            },
-            {
-              "portion": 0.25
-            }
-          ]
-        }
-      ]
     }
   }
 }

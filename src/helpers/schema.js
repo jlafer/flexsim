@@ -22,6 +22,7 @@ const schema = {
         arrivalGap: { $ref: 'propDefn.json#/definitions/propDefn' },
         channel: { $ref: 'propDefn.json#/definitions/propDefn' },
         talkTime: { $ref: 'propDefn.json#/definitions/propDefn' },
+        waitTime: { $ref: 'propDefn.json#/definitions/propDefn' },
         wrapTime: { $ref: 'propDefn.json#/definitions/propDefn' }
       },
       additionalProperties: true
@@ -130,15 +131,22 @@ const checkAndFillDomain = (defaults, domain) => {
   // NOTE: ajv's validate mutates defaults and domain by filling default values
   let valid = validate(defaults);
   if (!valid) {
-    console.log('ERROR: invalid locale file contents');
-    return [valid, validate.errors];
-  }
-  if (!valid) {
-    console.log('ERROR: invalid domain.json file contents');
+    console.log('ERROR: invalid locale file contents; please contact the project owners');
     return [valid, validate.errors];
   }
 
-  const res = mergeDomainIntoDefaults(defaults, domain);
+  if (!!domain) {
+    valid = validate(domain);
+    if (!valid) {
+      console.log('ERROR: invalid domain.json file contents');
+      return [valid, validate.errors];
+    }  
+  }
+
+  const merged = (!!domain)
+    ? mergeDomainIntoDefaults(defaults, domain)
+    : defaults;
+  const res = checkAndFill(merged);
   return [true, res];
 }
 
@@ -157,9 +165,15 @@ const mergeDomainIntoDefaults = (defaults, domain) => {
     : getStdProps(defaultProps);
 
   const finalProps = R.mergeDeepRight(finalDefaultprops, domainProps);
-  const propsArr = objDictToObjArr(finalProps);
+  const finalDomain = { ...finalKVs, props: finalProps };
+  return finalDomain;
+};
+
+const checkAndFill = (domain) => {
+  const { props, ...domainKVs } = domain;
+  const propsArr = objDictToObjArr(props);
   propsArr.forEach(fillMissingPropFields);
-  const finalDomain = { ...finalKVs, props: propsArr };
+  const finalDomain = { ...domainKVs, props: propsArr };
   return finalDomain;
 };
 

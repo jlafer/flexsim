@@ -1,5 +1,6 @@
 require("dotenv").config();
 const R = require('ramda');
+const seedrandom = require('seedrandom');
 
 const { parseAndValidateArgs } = require('./helpers/args');
 const { calcPropsValues } = require('./helpers/calcs');
@@ -17,7 +18,8 @@ async function run() {
     console.error('json validation errors:', result);
     throw new Error('validation of json failed');
   }
-  const context = { args, cfg: {}, domain: result, propValues: { workers: {}, tasks: {} } };
+  const rng = seedrandom(args.seed);
+  const context = { args, cfg: {}, domain: result, propValues: { workers: {}, tasks: {} }, rng };
   context.cfg.metadata = R.pick(
     ['brand', 'agentCnt', 'queueFilterProp', 'queueWorkerProps', 'props'],
     context.domain
@@ -43,7 +45,7 @@ function genWorkers(context) {
   const { agentCnt } = metadata;
   const workers = [];
   for (let i = 0; i < agentCnt; i++) {
-    const data = makeWorker(i, context, args.locale);
+    const data = makeWorker(i, context);
     workers.push(data);
   }
   return workers;
@@ -104,7 +106,9 @@ const propToFilter = (attrName) =>
     };
   };
 
-const makeWorker = (i, context, locale) => {
+const makeWorker = (i, context) => {
+  const { args } = context;
+  const { locale } = args;
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
   const fakerModule = localeToFakerModule(locale);
@@ -149,14 +153,16 @@ async function readDomainData(args) {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { d: 'domaindir', c: 'cfgdir', l: 'locale' },
+    aliases: { d: 'domaindir', c: 'cfgdir', l: 'locale', s: 'seed' },
     required: []
   });
-  const { } = process.env;
+  const { RANDOM_SEED } = process.env;
   args.locale = args.locale || 'en-us';
-  const { domaindir, cfgdir, locale } = args;
+  args.seed = args.seed || RANDOM_SEED;
+  const { domaindir, cfgdir, locale, seed } = args;
   console.log('domaindir:', domaindir);
   console.log('cfgdir:', cfgdir);
   console.log('locale:', locale);
+  console.log('seed:', seed);
   return args;
 }

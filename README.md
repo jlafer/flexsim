@@ -73,6 +73,9 @@ The scripts that use a Twilio project can use the following environment variable
 - AUTH_TOKEN
 - WRKSPC_SID
 
+The `genconfig` and simulation scripts accept a variable to set a seed value for the random number generator.
+- RANDOM_SEED
+
 The `agentsim` script also accepts a variable to specify the HTTP listening port.
 - AGENTSIM_PORT
 
@@ -100,12 +103,13 @@ In the project directory, there are five NodeJS scripts. See the `execution.txt`
 ### genconfig
 To start the `genconfig` script:
 ```
-node ./src/genconfig [--domaindir dir] [--cfgdir dir] [--locale code]
+node ./src/genconfig [--domaindir dir] [--cfgdir dir] [--locale code] [--seed abcde]
 ```
 The optional command-line options include:
 - `domaindir` specifies the directory where the `domain.json` file, if any, is located
 - `cfgdir` specifies the directory where the configuration files should be written
 - `locale` specifies the name of a locale, which is a 5-letter language and country code (following the ISO 639-1 and ISO 3166-1 standards, e.g., 'es_sp').
+- `seed` sets a seed value for the random number generator for predictable results
 
 ### deploy
 To start the `deploy` script:
@@ -129,11 +133,12 @@ It supports a single URL path:
 
 To start the `agentsim` script:
 ```
-node ./src/agentsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--port num]
+node ./src/agentsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--port num] [--seed abcde]
 ```
 The optional command-line options include:
 - `cfgdir` specifies the directory where the configuration files to be read are located
 - `port` specifies the HTTP port on which the program listens for callbacks from TaskRouter; if not specified here or in the environment, the default is 3000
+- `seed` sets a seed value for the random number generator for predictable results
 
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 
@@ -143,11 +148,12 @@ The simulation builds and deploys a TR Workflow that uses the configured Task at
 ### custsim
 To start the `custsim` script:
 ```
-node ./src/custsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--timeLim num] [--locale code]
+node ./src/custsim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--timeLim num] [--locale code] [--seed abcde]
 ```
 The optional command-line options include:
 - `cfgdir` specifies the directory where the configuration files to be read are located
 - `locale` specifies the name of a locale, which is a 5-letter language and country code (following the ISO 639-1 and ISO 3166-1 standards, e.g., 'es_sp').
+- `seed` sets a seed value for the random number generator for predictable results
 
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 

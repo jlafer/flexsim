@@ -4,34 +4,35 @@ const { getSinglePropInstance } = require('./schema');
 const { filterPropInstances } = require('./util');
 
 function calcPropsValues(ctx, valuesDescriptor) {
-  const { propInstances, propValues } = ctx;
+  const { propInstances } = ctx;
   const instancesToCalc = filterPropInstances(valuesDescriptor, propInstances)
     .filter(propAndInst => propAndInst.calculation === 'standard');
   const values = R.reduce(
-    calcAndAccumValue(propInstances, propValues, valuesDescriptor),
+    calcAndAccumValue(ctx, valuesDescriptor),
     {},
     instancesToCalc
   );
   return values;
 }
 
-const calcAndAccumValue = R.curry((propInstances, propValues, valuesDescriptor, accum, propAndInst) => {
-  const value = calcAndSaveValue(propInstances, propValues, valuesDescriptor, propAndInst);
+const calcAndAccumValue = R.curry((ctx, valuesDescriptor, accum, propAndInst) => {
+  const value = calcAndSaveValue(ctx, valuesDescriptor, propAndInst);
   const keyPath = R.split('.', propAndInst.instName);
   return R.assocPath(keyPath, value, accum);
 });
 
-const calcAndSaveValue = (propInstances, propValues, valuesDescriptor, propAndInst) => {
-  const value = calcValue(propInstances, propValues, valuesDescriptor, propAndInst);
+const calcAndSaveValue = (ctx, valuesDescriptor, propAndInst) => {
+  const { propValues } = ctx;
+  const value = calcValue(ctx, valuesDescriptor, propAndInst);
   const keyPath = R.split('.', propAndInst.instName);
   addPropValueToContext(propValues, valuesDescriptor, keyPath, value);
   return value;
 };
 
-const calcValue = R.curry((propInstances, propValues, valuesDescriptor, propAndInst) => {
+const calcValue = R.curry((ctx, valuesDescriptor, propAndInst) => {
   const value = (propAndInst.valueCnt === 1)
-    ? calcScalarValue(propInstances, propValues, valuesDescriptor, propAndInst)
-    : calcArrayValue(propInstances, propValues, valuesDescriptor, propAndInst);
+    ? calcScalarValue(ctx, valuesDescriptor, propAndInst)
+    : calcArrayValue(ctx, valuesDescriptor, propAndInst);
   return value;
 });
 
@@ -44,27 +45,27 @@ const addPropValueToContext = (propValues, valuesDescriptor, keyPath, value) => 
   );
 };
 
-const calcArrayValue = (propInstances, propValues, valuesDescriptor, propAndInst) => {
+const calcArrayValue = (ctx, valuesDescriptor, propAndInst) => {
   const res = [];
   for (let i = 0; i < propAndInst.valueCnt; i++) {
-    const value = calcScalarValue(propInstances, propValues, valuesDescriptor, propAndInst);
+    const value = calcScalarValue(ctx, valuesDescriptor, propAndInst);
     res.push(value);
   }
   return R.uniq(res);
 };
 
-const calcScalarValue = (propInstances, propValues, valuesDescriptor, propAndInst) => {
+const calcScalarValue = (ctx, valuesDescriptor, propAndInst) => {
   const value = (propAndInst.expr === 'range')
-    ? calcRangeValue(propInstances, propValues, valuesDescriptor, propAndInst)
-    : calcEnumValue(propAndInst);
+    ? calcRangeValue(ctx, valuesDescriptor, propAndInst)
+    : calcEnumValue(ctx, propAndInst);
   return value;
 }
 
-const calcRangeValue = (propInstances, propValues, valuesDescriptor, propAndInst) => {
+const calcRangeValue = (ctx, valuesDescriptor, propAndInst) => {
   const { dataType, curve, max, min } = propAndInst;
   const decValue = (curve == 'uniform')
     ? calcUniformValue(propAndInst)
-    : calcBellValue(propInstances, propValues, valuesDescriptor, propAndInst);
+    : calcBellValue(ctx, valuesDescriptor, propAndInst);
   let value = (dataType === 'integer') ? Math.round(decValue) : decValue;
   if (value > max)
     value = max;
@@ -73,35 +74,38 @@ const calcRangeValue = (propInstances, propValues, valuesDescriptor, propAndInst
   return value;
 };
 
-const calcEnumValue = (propAndInst) => {
+const calcEnumValue = (ctx, propAndInst) => {
   const { values, valueProps } = propAndInst;
   const portions = valueProps.map(R.prop('portion'));
-  const randNum = calcUniformValue(propAndInst);
+  const randNum = calcUniformValue(ctx, propAndInst);
   const idx = getPortionsIndexUniform(portions, randNum);
   const value = values[idx];
   return value;
 };
 
-const calcUniformValue = (propAndInst) => {
+const calcUniformValue = (ctx, propAndInst) => {
+  const { rng } = ctx;
   const { min, max } = propAndInst;
   const size = max - min;
-  const decValue = (Math.random() * size) + min;
+  const decValue = (rng() * size) + min;
   return decValue;
 };
 
-const calcBellValue = (propInstances, propValues, valuesDescriptor, propAndInst) => {
+const calcBellValue = (ctx, valuesDescriptor, propAndInst) => {
+  const { rng } = ctx;
   const { min, max, influences } = propAndInst;
   const size = max - min;
   const mean = min + (size / 2);
-  const stddev = size / 2;
-  const shift = calculateInfluencesAmount(propInstances, propValues, valuesDescriptor, influences);
-  const decValue = randomSkewNormal(mean + shift, stddev, 0);
+  const stddev = size / 10;
+  const shift = calculateInfluencesAmount(ctx, valuesDescriptor, influences);
+  const decValue = randomSkewNormal(rng, mean + shift, stddev, 0);
   return decValue;
 };
 
-const calculateInfluencesAmount = (propInstances, propValues, valuesDescriptor, influences) => {
+const calculateInfluencesAmount = (ctx, valuesDescriptor, influences) => {
   if (influences.length === 0)
     return 0;
+  const { propInstances, propValues } = ctx;
   const { entity, id } = valuesDescriptor;
   const shifts = R.map(
     influence => {
@@ -124,7 +128,7 @@ const calculateInfluencesAmount = (propInstances, propValues, valuesDescriptor, 
 function calcActivityChange(ctx, worker) {
   const { propInstances } = ctx;
   const propAndInst = getSinglePropInstance('activity', propInstances);
-  const activityName = calcEnumValue(propAndInst);
+  const activityName = calcEnumValue(ctx, propAndInst);
 
   const currActivityName = worker.activityName;
   const idx = propAndInst.values.indexOf(currActivityName);
@@ -151,18 +155,18 @@ function getPortionsIndexUniform(mapping, randNum) {
 
 // use Box-Muller transform to create normal variates, u0 and v,
 // from uniform variates 
-const randomNormals = () => {
+const randomNormals = (rng) => {
   let u1 = 0, u2 = 0;
   // convert [0,1) to (0,1)
-  while (u1 === 0) u1 = Math.random();
-  while (u2 === 0) u2 = Math.random();
+  while (u1 === 0) u1 = rng();
+  while (u2 === 0) u2 = rng();
   const R = Math.sqrt(-2.0 * Math.log(u1));
   const Θ = 2.0 * Math.PI * u2;
   return [R * Math.cos(Θ), R * Math.sin(Θ)];
 };
 
-const randomSkewNormal = (mean, stddev, skew = 0) => {
-  const [u0, v] = randomNormals();
+const randomSkewNormal = (rng, mean, stddev, skew = 0) => {
+  const [u0, v] = randomNormals(rng);
   if (skew === 0)
     return mean + stddev * u0;
   const correlation = skew / Math.sqrt(1 + skew * skew);
@@ -173,5 +177,6 @@ const randomSkewNormal = (mean, stddev, skew = 0) => {
 
 module.exports = {
   calcActivityChange,
-  calcPropsValues
+  calcPropsValues,
+  calcValue
 }

@@ -78,16 +78,6 @@ const propDefnSchema = {
                 enum: ['uniform', 'bell'],
                 default: 'uniform'
               },
-              influences: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    factor: { type: 'string' },
-                    amount: { type: 'number' }
-                  }
-                }
-              },
               valueCnt: {
                 type: 'integer',
                 default: 1

@@ -126,16 +126,17 @@ const calculateInfluencesAmount = (ctx, valuesDescriptor, influences) => {
 };
 
 function calcActivityChange(ctx, worker) {
-  const { propInstances } = ctx;
+  const { propInstances, rng } = ctx;
   const propAndInst = getSinglePropInstance('activity', propInstances);
   const activityName = calcEnumValue(ctx, propAndInst);
 
   const currActivityName = worker.activityName;
   const idx = propAndInst.values.indexOf(currActivityName);
   if (idx === -1)
-    return ['Available', 2000]
+    return ['Available', 5000];
   const valueProp = propAndInst.valueProps[idx];
-  const delayMsec = valueProp.baseDur * 1000;
+  const delay = randomSkewNormal(rng, valueProp.baseDur, valueProp.baseDur * 0.20, 0);
+  const delayMsec = Math.round(delay * 1000);
 
   return [activityName, delayMsec];
 }

@@ -78,7 +78,6 @@ const completeTask = async (ctx, taskSid, taskAttributes, valuesDescriptor) => {
 
 const updateTaskAttributes = (ctx, taskSid, attributes) => {
   const { args, client } = ctx;
-  console.log(`${taskSid}: adding attributes:`, attributes);
   return client.taskrouter.v1.workspaces(args.wrkspc).tasks(taskSid)
     .update({ attributes: JSON.stringify(attributes) })
     .then(task => {

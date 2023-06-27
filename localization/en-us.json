@@ -115,19 +115,19 @@
           "valueProps": [
             {
               "baseDur": 90,
-              "portion": 0.25
+              "portion": 0.50
             },
             {
               "baseDur": 15,
-              "portion": 0.15
+              "portion": 0.10
             },
             {
               "baseDur": 30,
-              "portion": 0.35
+              "portion": 0.25
             },
             {
-              "baseDur": 120,
-              "portion": 0.25
+              "baseDur": 30,
+              "portion": 0.15
             }
           ]
         }

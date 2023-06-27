@@ -90,21 +90,12 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime, taskAt
 };
 
 async function loginAllWorkers(context) {
-  const { workers, activities } = context;
-  const availableAct = findObjInList('friendlyName', 'Available', activities);
+  const { workers } = context;
   for (let i = 0; i < workers.length; i++) {
     const worker = workers[i];
     const { sid, friendlyName, attributes } = worker;
     console.log(`${friendlyName} [${attributes.full_name}] signing in`);
-    await changeActivity(context, sid, availableAct.sid);
-    const activityChange = calcActivityChange(context, worker);
-    const [activityName, delayMsec] = activityChange;
-    setTimeout(
-      function () {
-        changeActivityAndWait(context, sid, activityName);
-      },
-      delayMsec
-    );
+    changeActivityAndWait(context, sid, 'Available');
   }
 }
 
@@ -115,20 +106,15 @@ async function changeActivityAndWait(context, WorkerSid, activityName) {
 
   const { activities } = context;
   const activity = findObjInList('friendlyName', activityName, activities);
-  const availableAct = findObjInList('friendlyName', 'Available', activities);
 
-  const activitySid = (currActivityName === 'Available')
-    ? activity.sid
-    : availableAct.sid;
-  const actualName = (currActivityName === 'Available')
-    ? activityName
-    : availableAct.friendlyName;
-  console.log(formatDt(now));
-  console.log(`  ${friendlyName} changing from ${currActivityName} to ${actualName}`);
-  try {
-    await changeActivity(context, sid, activitySid);
+  if (activityName !== currActivityName) {
+    console.log(formatDt(now));
+    console.log(`  ${friendlyName} changing from ${currActivityName} to ${activityName}`);
+    try {
+      await changeActivity(context, sid, activity.sid);
+    }
+    catch (err) { }  
   }
-  catch (err) { }
 
   const activityChange = calcActivityChange(context, worker);
   const [nextActivityName, delayMsec] = activityChange;

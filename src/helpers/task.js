@@ -21,12 +21,12 @@ const fetchTasks = async (ctx) => {
 
 const fetchFlexsimTasks = async (ctx) => {
   const allTasks = await fetchTasks(ctx);
-  const tasks = allTasks.filter(hasAttributeValue('source', 'flexsim'));
+  const tasks = allTasks.filter(hasAttributeValue('flexsim', ctx.cfg.metadata.brand));
   return tasks;
 };
 
 const submitTask = async (ctx, valuesDescriptor) => {
-  const { args, client, workflow, channels, propInstances, propValues } = ctx;
+  const { args, cfg, client, workflow, channels, propInstances, propValues } = ctx;
   const { wrkspc } = args;
   const channelProp = getSinglePropInstance('channel', propInstances);
   const channelName = getPropValue(propValues, valuesDescriptor.id, channelProp);
@@ -37,7 +37,7 @@ const submitTask = async (ctx, valuesDescriptor) => {
       {
         taskChannel: taskChannel.sid,
         attributes: JSON.stringify({
-          source: 'flexsim',
+          flexsim: cfg.metadata.brand,
           name: valuesDescriptor.id,
           ...customAttrs
         }),
@@ -67,11 +67,12 @@ const wrapupTask = (ctx, taskSid) => {
   setTaskStatus('wrapping', ctx, taskSid);
 };
 
-const completeTask = async (ctx, taskSid, valuesDescriptor) => {
+const completeTask = async (ctx, taskSid, taskAttributes, valuesDescriptor) => {
   const attributes = getAttributes(ctx, valuesDescriptor);
+  const finalAttributes = R.mergeDeepRight(taskAttributes, attributes);
   let task = await setTaskStatus('completed', ctx, taskSid);
   console.log(`task completion for ${task.sid}`);
-  task = await updateTaskAttributes(ctx, taskSid, attributes);
+  task = await updateTaskAttributes(ctx, taskSid, finalAttributes);
   console.log(`${task.sid} now has attributes:`, task.attributes);
 };
 

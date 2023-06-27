@@ -143,6 +143,12 @@ const delay = (mSec) => {
   );
 };
 
+const sumValuesForKey = R.curry((valueKey, arr) => {
+  return R.pipe(
+    R.map(R.propOr(0.0, valueKey)),
+    R.reduce(R.add, 0.0))(arr);
+});
+
 function formatDt(tsMsec) {
   const dt = new Date(tsMsec);
   return dt.toLocaleTimeString();
@@ -180,5 +186,6 @@ module.exports = {
   getPropValues,
   hasAttributeValue,
   localeToFakerModule,
-  sortPropsByFactors
+  sortPropsByFactors,
+  sumValuesForKey
 }

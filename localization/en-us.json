@@ -41,8 +41,7 @@
         {
           "entity": "tasks",
           "phase": "assign",
-          "isAttribute": false,
-          "calculation": "custom"
+          "isAttribute": false
         }
       ]
     },

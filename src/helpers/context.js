@@ -1,4 +1,4 @@
-const { getPropInstances } = require('./schema');
+const { checkDomain, getPropInstances } = require('./schema');
 const seedrandom = require('seedrandom');
 
 const initializeCommonContext = (cfg, args) => {
@@ -6,6 +6,8 @@ const initializeCommonContext = (cfg, args) => {
   const simStartTS = Date.now();
   const rng = seedrandom(seed);
   const context = { cfg, args, simStartTS, rng };
+  const { metadata } = cfg;
+  checkDomain(metadata);
   console.log(`initializeCommonContext: rand = ${rng()}`)
   context.propValues = { tasks: {}, workers: {} };
   context.client = require('twilio')(acct, auth);

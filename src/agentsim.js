@@ -32,8 +32,10 @@ async function init() {
   })
 
   app.post('/reservation', (req, res) => {
-    const { TaskAge, TaskSid, WorkerSid, TaskAttributes } = req.body;
-    addPropValuesFromReservation(context, req.body);
+    const { TaskAge, TaskSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
+    const taskAttributes = JSON.parse(TaskAttributes);
+    const workerAttributes = JSON.parse(WorkerAttributes);
+    addPropValuesFromReservation(context, TaskAge, taskAttributes, workerAttributes);
     const { propValues, propInstances } = context;
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
@@ -57,7 +59,7 @@ async function init() {
         const now = Date.now();
         console.log(formatDt(now));
         console.log(`  ${friendlyName} wrapping task ${formatSid(TaskSid)}`);
-        doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime);
+        doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime, taskAttributes);
       },
       (talkTime * 1000)
     );
@@ -71,7 +73,7 @@ async function init() {
 
 init();
 
-const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
+const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime, taskAttributes) => {
   wrapupTask(context, TaskSid);
   setTimeout(
     function () {
@@ -80,7 +82,7 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
       const valuesDescriptor = { entity: 'tasks', phase: 'complete', id: custName };
       calcPropsValues(context, valuesDescriptor);
       console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
-      completeTask(context, TaskSid, valuesDescriptor);
+      completeTask(context, TaskSid, taskAttributes, valuesDescriptor);
       R.dissoc(TaskSid, context.tasks);
     },
     (wrapTime * 1000)
@@ -138,10 +140,7 @@ async function loadTwilioResources(context) {
   context.workers = await fetchFlexsimWorkers(context);
 }
 
-const addPropValuesFromReservation = (context, body) => {
-  const { TaskAge, TaskAttributes, WorkerAttributes } = body;
-  const taskAttributes = JSON.parse(TaskAttributes);
-  const workerAttributes = JSON.parse(WorkerAttributes);
+const addPropValuesFromReservation = (context, TaskAge, taskAttributes, workerAttributes) => {
   const taskData = { waitTime: TaskAge, ...taskAttributes };
   const custName = taskData.name;
   const workerData = { ...workerAttributes };

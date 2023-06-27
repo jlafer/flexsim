@@ -24,7 +24,7 @@ const fetchWorkers = async (ctx) => {
 
 const fetchFlexsimWorkers = async (ctx) => {
   const allWorkers = await fetchWorkers(ctx);
-  const workers = allWorkers.filter(hasAttributeValue('data', 'flexsim'));
+  const workers = allWorkers.filter(hasAttributeValue('flexsim', ctx.cfg.metadata.brand));
   return workers;
 };
 

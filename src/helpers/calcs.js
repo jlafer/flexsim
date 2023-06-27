@@ -6,7 +6,7 @@ const { filterPropInstances } = require('./util');
 function calcPropsValues(ctx, valuesDescriptor) {
   const { propInstances } = ctx;
   const instancesToCalc = filterPropInstances(valuesDescriptor, propInstances)
-    .filter(propAndInst => propAndInst.calculation === 'standard');
+    .filter(propAndInst => !propAndInst.hasManualCalculation);
   const values = R.reduce(
     calcAndAccumValue(ctx, valuesDescriptor),
     {},
@@ -64,7 +64,7 @@ const calcScalarValue = (ctx, valuesDescriptor, propAndInst) => {
 const calcRangeValue = (ctx, valuesDescriptor, propAndInst) => {
   const { dataType, curve, max, min } = propAndInst;
   const decValue = (curve == 'uniform')
-    ? calcUniformValue(propAndInst)
+    ? calcUniformValue(ctx, propAndInst)
     : calcBellValue(ctx, valuesDescriptor, propAndInst);
   let value = (dataType === 'integer') ? Math.round(decValue) : decValue;
   if (value > max)

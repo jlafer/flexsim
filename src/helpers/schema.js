@@ -1,7 +1,7 @@
 const Ajv = require('ajv');
 const R = require('ramda');
 
-const { findObjInList, sortPropsByFactors } = require('./util');
+const { findObjInList, sortPropsByFactors, sumValuesForKey } = require('./util');
 
 const schema = {
   $id: 'http://twilio.com/schemas/flexsim/domain.json',
@@ -68,10 +68,6 @@ const propDefnSchema = {
                 type: 'string',
                 enum: ['deploy', 'activity', 'arrive', 'assign', 'complete']
               },
-              calculation: {
-                type: 'string',
-                enum: ['standard', 'custom']
-              },
               isAttribute: { type: 'boolean' },
               curve: {
                 type: 'string',
@@ -114,6 +110,22 @@ const propDefnSchema = {
   }
 };
 
+const requiredParamNames = [
+  'brand', 'agentCnt', 'queueFilterProp', 'queueWorkerProps', 'props'
+];
+
+const stdPropNames = [
+  'abandonTime', 'activity', 'arrivalGap', 'channel', 'talkTime', 'waitTime', 'wrapTime'
+];
+
+const requiredPropProps = [
+  'name', 'dataType', 'expr', 'min', 'max', 'instances'
+];
+
+const requiredInstanceProps = [
+  'instName', 'entity', 'phase', 'isAttribute', 'curve', 'valueCnt'
+];
+
 const checkAndFillDomain = (defaults, domain) => {
   const ajv = new Ajv({ useDefaults: true });
   const validate = ajv.addSchema(propDefnSchema).compile(schema);
@@ -141,11 +153,11 @@ const checkAndFillDomain = (defaults, domain) => {
 }
 
 const mergeDomainIntoDefaults = (defaults, domain) => {
-  const { props: defaultProps, ...defaultKVs } = defaults;
-  const { props: domainProps, ...domainKVs } = domain;
+  const { props: defaultProps, ...defaultParams } = defaults;
+  const { props: domainProps, ...domainParams } = domain;
 
-  // first, merge KVs (all of the peers to props)
-  const finalKVs = R.mergeRight(defaultKVs, domainKVs);
+  // first, merge the parameters (except "props")
+  const finalParams = R.mergeRight(defaultParams, domainParams);
 
   // next, remove any non-standard props from the defaults
   // if the domain file specifies any non-standard props
@@ -155,41 +167,49 @@ const mergeDomainIntoDefaults = (defaults, domain) => {
     : getStdProps(defaultProps);
 
   const finalProps = R.mergeDeepRight(finalDefaultprops, domainProps);
-  const finalDomain = { ...finalKVs, props: finalProps };
+  const finalDomain = { ...finalParams, props: finalProps };
   return finalDomain;
 };
 
 const checkAndFill = (domain) => {
-  const { props, ...domainKVs } = domain;
-  const propsArr = objDictToObjArr(props);
-  propsArr.forEach(fillMissingPropFields);
-  const finalDomain = { ...domainKVs, props: propsArr };
+  const { props, ...parameters } = domain;
+
+  //convert props to an array-of-objs for ease-of-use in the rest of flexsim
+  const propsArr = objDictToObjArr('name', props);
+  const finalDomain = { ...parameters, props: propsArr };
+
+  fillDomain(finalDomain);
+  checkDomain(finalDomain);
+
   return finalDomain;
 };
 
+const fillDomain = (domain) => {
+  const { props, ...parameters } = domain;
+  props.forEach(fillMissingPropFields);
+  const waitTimeProp = findObjInList('name', 'waitTime', props);
+  if (!!waitTimeProp)
+    waitTimeProp.instances[0].hasManualCalculation = true;
+};
+
 function fillMissingPropFields(prop) {
-  const { name } = prop;
+  const { instances } = prop;
   if (!prop.expr)
     prop.expr = 'enum';
   if (!prop.dataType)
     prop.dataType = 'string';
-  if (prop.expr === 'enum' && (!prop.values || prop.values.length === 0))
-    throw new Error(`property ${name} has expr=enum but no values specified`);
   if (!prop.min)
     prop.min = 0;
   if (!prop.max)
     prop.max = 1;
-  if (!prop.instances)
-    throw new Error(`property ${name} has no instances specified`);
-  prop.instances.forEach(fillMissingInstanceFields(prop));
+  if (instances)
+    instances.forEach(fillMissingInstanceFields(prop));
 }
 
 const fillMissingInstanceFields = (prop) =>
   inst => {
     if (!inst.instName)
       inst.instName = prop.name;
-    if (!inst.calculation)
-      inst.calculation = 'standard';
     if (inst.isAttribute == undefined)
       inst.isAttribute = true;
     if (!inst.influences)
@@ -204,19 +224,71 @@ const fillMissingInstanceFields = (prop) =>
       inst.curve = (prop.expr === 'enum') ? 'uniform' : 'bell';
     if (!inst.valueCnt)
       inst.valueCnt = 1;
-    if (prop.expr === 'enum' && !inst.valueProps)
-      throw new Error(`property ${prop.name} has instance with no valueProps specified`);
   }
 
-const objDictToObjArr = (dictByName) => {
+const checkDomain = (domain) => {
+  const paramNames = R.keys(domain);
+  const missingParams = R.difference(requiredParamNames, paramNames);
+  if (missingParams.length > 0)
+    throwConfigError(`missing domain parameters: ${missingParams.join(', ')}`);
+
+  const { props, ...parameters } = domain;
+
+  const propNames = R.pluck('name', props);
+  const missingProps = R.difference(stdPropNames, propNames);
+  if (missingProps.length > 0)
+    throwConfigError(`missing standard value props: ${missingProps.join(', ')}`);
+
+  props.forEach(checkPropFields);
+};
+
+const checkPropFields = (prop) => {
+  const { name, dataType, expr, values, instances } = prop;
+  const propPropNames = R.keys(prop);
+  const missingPropProps = R.difference(requiredPropProps, propPropNames);
+  if (missingPropProps.length > 0)
+    throwConfigError(`prop -${name} is missing properties: ${missingPropProps.join(', ')}`);
+  if (!['boolean', 'integer', 'number', 'string'].includes(dataType))
+    throwConfigError(`property ${name} has invalid dataType ${dataType}`);
+  if (!['enum', 'range'].includes(expr))
+    throwConfigError(`property ${name} has invalid expr ${expr}`);
+  if (expr === 'enum' && (!values || values.length === 0))
+    throwConfigError(`property ${name} has expr=enum but no values specified`);
+  instances.forEach(checkInstanceFields(prop));
+};
+
+const checkInstanceFields = (prop) => {
+  const { name } = prop;
+  return (inst) => {
+    const { entity, phase, curve, valueProps } = inst;
+    const instanceProps = R.keys(inst);
+    const missingInstanceProps = R.difference(requiredInstanceProps, instanceProps);
+    if (missingInstanceProps.length > 0)
+      throwConfigError(`prop -${name} is missing properties: ${missingInstanceProps.join(', ')}`);
+    if (!['tasks', 'workers'].includes(entity))
+      throwConfigError(`prop ${name} has instance with invalid entity ${entity}`);
+    if (!['deploy', 'activity', 'arrive', 'assign', 'complete'].includes(phase))
+      throwConfigError(`prop ${name} has instance with invalid phase ${phase}`);
+    if (!['uniform', 'bell'].includes(curve))
+      throwConfigError(`prop ${name} has instance with invalid curve ${curve}`);
+    if (prop.expr === 'enum' && !valueProps)
+      throwConfigError(`property ${name} has instance with no valueProps specified`);
+    if (prop.expr === 'enum')
+      checkValueProps(name, valueProps);
+  }
+}
+
+const objDictToObjArr = (key, dictByName) => {
   const arr = R.toPairs(dictByName)
-    .map(([name, prop]) => ({ ...prop, name }));
+    .map(([name, prop]) => ({ ...prop, [key]: name }));
   return arr;
 };
 
-const stdPropNames = [
-  'abandonTime', 'activity', 'arrivalGap', 'channel', 'talkTime', 'waitTime', 'wrapTime'
-];
+const checkValueProps = (name, valueProps) => {
+  const sum = sumValuesForKey('portion', valueProps);
+  if (sum < 0.99 || sum > 1.01)
+    throwConfigError(`property ${name} has instance with valueProps not summing to 1`);
+};
 
 const filterStdProps = ([name, _prop]) => stdPropNames.includes(name);
 const filterNonStdProps = R.complement(filterStdProps);
@@ -257,7 +329,13 @@ const getPropInstances = (props) => {
 
 const getSinglePropInstance = (name, propInstances) => findObjInList('instName', name, propInstances);
 
+const throwConfigError = (msg) => {
+  console.error(`ERROR: ${msg}`);
+  throw new Error(msg);
+};
+
 module.exports = {
+  checkDomain,
   checkAndFillDomain,
   getPropInstances,
   getSinglePropInstance

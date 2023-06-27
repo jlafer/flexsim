@@ -107,8 +107,9 @@ const propToFilter = (attrName) =>
   };
 
 const makeWorker = (i, context) => {
-  const { args } = context;
+  const { args, cfg } = context;
   const { locale } = args;
+  const { metadata } = cfg;
   const agtNum = `${i}`.padStart(3, '0');
   const friendlyName = `Agent_${agtNum}`;
   const fakerModule = localeToFakerModule(locale);
@@ -119,7 +120,7 @@ const makeWorker = (i, context) => {
     customAttrs = R.assocPath(['routing', 'levels'], {}, customAttrs);
   }
   const attributes = {
-    data: 'flexsim',
+    flexsim: metadata.brand,
     contact_uri: `client:${friendlyName}`,
     full_name,
     ...customAttrs

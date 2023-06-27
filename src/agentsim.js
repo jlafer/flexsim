@@ -46,7 +46,6 @@ async function init() {
       throw new Error(`a task ${TaskSid} with no name???`);
     }
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
-    console.log(`    age: ${TaskAge}`);
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
     calcPropsValues(context, valuesDescriptor);
     const talkTimeProp = getSinglePropInstance('talkTime', propInstances);

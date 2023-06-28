@@ -224,6 +224,8 @@ const fillMissingInstanceFields = (prop) =>
       inst.curve = (prop.expr === 'enum') ? 'uniform' : 'bell';
     if (!inst.valueCnt)
       inst.valueCnt = 1;
+    if (prop.expr === 'enum' && !inst.valueProps)
+      inst.valueProps = buildDefaultValueProps(prop.values);
   }
 
 const checkDomain = (domain) => {
@@ -277,6 +279,17 @@ const checkInstanceFields = (prop) => {
       checkValueProps(name, valueProps);
   }
 }
+
+const buildDefaultValueProps = (values) => {
+  const valueCnt = values.length;
+  if (valueCnt === 0)
+    return [];
+  const equalPortion = Math.floor(100 / valueCnt);
+  const gap = 100 - (equalPortion * valueCnt);
+  const valueProps = R.map(_value => ({ portion: equalPortion / 100 }), values);
+  valueProps[0].portion += (gap / 100);
+  return valueProps;
+};
 
 const objDictToObjArr = (key, dictByName) => {
   const arr = R.toPairs(dictByName)

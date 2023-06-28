@@ -251,7 +251,7 @@ The default value is `1`.
 
 #### valueProps
 This is an array of objects and specifies additional parameters used for the generation of the prop's values. It only applies to `enum` props. If specified, there must be one member of this array for each member of the `values` array in the parent prop. Each object in the array currently supports a single key: `portion`, which indicates the target incidence of the corresponding value being generated for the prop instance at runtime.
-There are currently no default values.
+If omitted, the simulation will evenly generate all of the values in the prop's `values` array. For example, if three values are specified in the prop's enumeration, each value will occur roughly one third of the time.
 
 #### influences
 This is an array of objects and specifies how other value props influence the value generated for this one. Each object in the array must contain the following keys: `factor`, `effect` and `amount`.
@@ -299,3 +299,5 @@ When using `flexsim` in a demo, here are some tips:
 - Checks on the validity of JSON in the domain file has been strengthened.
 - Bug fixes:
   - Task attributes set during task arrival are no longer overwritten at task completion.
+### 0.0.3
+- If the `valueProps` property for an instance of a value prop is omitted from your `domain.json` file, the `genconfig` script will evenly generate all of the values in the prop's `values` array.

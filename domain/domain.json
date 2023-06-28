@@ -1,6 +1,6 @@
 {
   "brand": "ACME",
-  "agentCnt": 7,
+  "agentCnt": 20,
   "queueFilterProp": "topic",
   "queueWorkerProps": [
     "routing.skills"
@@ -232,6 +232,18 @@
               "portion": 0.25
             }
           ]
+        }
+      ]
+    },
+    "language": {
+      "expr": "enum",
+      "values": [
+        "French"
+      ],
+      "instances": [
+        {
+          "entity": "tasks",
+          "phase": "arrive"
         }
       ]
     }

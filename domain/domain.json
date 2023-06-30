@@ -112,13 +112,16 @@
           "isAttribute": false,
           "valueProps": [
             {
-              "portion": 0.5
+              "portion": 0.5,
+              "baseCapacity": 1
             },
             {
-              "portion": 0.3
+              "portion": 0.3,
+              "baseCapacity": 2
             },
             {
-              "portion": 0.2
+              "portion": 0.2,
+              "baseCapacity": 2
             }
           ]
         }
@@ -238,7 +241,12 @@
     "language": {
       "expr": "enum",
       "values": [
-        "French"
+        "English",
+        "Spanish",
+        "French",
+        "Mandarin",
+        "Italian",
+        "Korean"
       ],
       "instances": [
         {

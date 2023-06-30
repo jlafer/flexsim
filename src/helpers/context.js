@@ -1,4 +1,4 @@
-const { checkDomain, getPropInstances } = require('./schema');
+const { checkDomain, getPropInstances } = require('flexsim-lib');
 const seedrandom = require('seedrandom');
 
 const initializeCommonContext = (cfg, args) => {

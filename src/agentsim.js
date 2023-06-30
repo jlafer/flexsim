@@ -1,17 +1,15 @@
 require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
+const {
+  calcActivityChange, calcPropsValues, findObjInList, formatDt, formatSid,
+  getAttributeFromJson, getPropValue, getSinglePropInstance, readJsonFile
+} = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
-const { calcActivityChange, calcPropsValues } = require('./helpers/calcs');
 const { initializeCommonContext } = require('./helpers/context');
-const { readJsonFile } = require('./helpers/files');
-const { getSinglePropInstance } = require('./helpers/schema');
 const { completeTask, wrapupTask } = require('./helpers/task');
-const {
-  findObjInList, formatDt, formatSid, getAttributeFromJson, getPropValue
-} = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');

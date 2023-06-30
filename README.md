@@ -250,8 +250,12 @@ This is an integer and specifies the number of values to generate for the prop i
 The default value is `1`.
 
 #### valueProps
-This is an array of objects and specifies additional parameters used for the generation of the prop's values. It only applies to `enum` props. If specified, there must be one member of this array for each member of the `values` array in the parent prop. Each object in the array currently supports a single key: `portion`, which indicates the target incidence of the corresponding value being generated for the prop instance at runtime.
+This is an array of objects and specifies additional parameters used for the generation of the prop's values. It only applies to `enum` props. If specified, there must be one member of this array for each member of the `values` array in the parent prop. Each object in the array has a single required key: `portion`, which indicates the target incidence of the corresponding value being generated for the prop instance at runtime.
 If omitted, the simulation will evenly generate all of the values in the prop's `values` array. For example, if three values are specified in the prop's enumeration, each value will occur roughly one third of the time.
+
+Specific standard value props expect additional keys in the `valueProps` objects.
+- The `channel` prop's instance expects a `baseCapacity` key whose integer value specifies the default capacity of Workers for the corresponding channel value.
+- The `activity` prop's instance expects a `baseDur` key whose integer value specifies the default duration that Workers spend in the corresponding activity.
 
 #### influences
 This is an array of objects and specifies how other value props influence the value generated for this one. Each object in the array must contain the following keys: `factor`, `effect` and `amount`.
@@ -301,3 +305,4 @@ When using `flexsim` in a demo, here are some tips:
   - Task attributes set during task arrival are no longer overwritten at task completion.
 ### 0.0.3
 - If the `valueProps` property for an instance of a value prop is omitted from your `domain.json` file, the `genconfig` script will evenly generate all of the values in the prop's `values` array.
+- The capacity of all workers for each channel can be specified in the domain file, using the `baseCapacity` property for each value in the `channel` prop's (only) instance.

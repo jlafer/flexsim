@@ -87,13 +87,16 @@
                 "isAttribute": false,
                 "valueProps": [
                   {
-                    "portion": 0.5
+                    "portion": 0.34,
+                    "baseCapacity": 1
                   },
                   {
-                    "portion": 0.3
+                    "portion": 0.33,
+                    "baseCapacity": 1
                   },
                   {
-                    "portion": 0.2
+                    "portion": 0.33,
+                    "baseCapacity": 1
                   }
                 ]
               }

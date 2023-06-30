@@ -1,6 +1,5 @@
 const R = require('ramda');
-
-const { findObjInList } = require('./util');
+const { findObjInList } = require('flexsim-lib');
 
 const fetchQueues = (ctx) => {
   const { args, client } = ctx;

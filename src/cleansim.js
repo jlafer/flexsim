@@ -1,9 +1,9 @@
 require("dotenv").config();
+const { readJsonFile } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
-const { readJsonFile } = require('./helpers/files');
 const { removeTasks } = require('./helpers/task');
 const { fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
 const { fetchWorkflow } = require('./helpers/workflow');

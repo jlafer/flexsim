@@ -1,9 +1,7 @@
 const R = require('ramda');
-
-const { getSinglePropInstance } = require('./schema');
 const {
-  findObjInList, formatSid, getAttributes, getPropValue, hasAttributeValue
-} = require('./util');
+  findObjInList, formatSid, getAttributes, getPropValue, getSinglePropInstance, hasAttributeValue
+} = require('flexsim-lib');
 
 const fetchTask = async (ctx, sid) => {
   const { args, client } = ctx;

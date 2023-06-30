@@ -1,9 +1,10 @@
 require("dotenv").config();
+const { readJsonFile } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
+const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
-const { readJsonFile } = require('./helpers/files');
 const { fetchQueues, createQueues, removeQueues } = require("./helpers/queue");
 const { createWorkers, removeWorkers } = require('./helpers/worker');
 const { createWorkflow, fetchWorkflows, removeWorkflow } = require('./helpers/workflow');
@@ -25,6 +26,7 @@ async function fetchCurrInfra(context) {
   context.previous.queues = await fetchQueues(context);
   context.previous.workflows = await fetchWorkflows(context);
   context.activities = await fetchActivities(context);
+  context.channels = await fetchTaskChannels(context);
 }
 
 async function removeOldInfra(context) {

@@ -1,6 +1,5 @@
 const R = require('ramda');
-
-const { findObjInList, hasAttributeValue } = require('./util');
+const { findObjInList, hasAttributeValue } = require('flexsim-lib');
 
 const getWorker = (ctx, sid) => {
   const worker = findObjInList('sid', sid, ctx.workers);
@@ -36,8 +35,20 @@ async function createWorkers(ctx) {
     const data = workers[i];
     console.log('createWorkers: data:', data)
     const jsonData = { ...data, attributes: JSON.stringify(data.attributes) }
-    await client.taskrouter.v1.workspaces(wrkspc).workers
+    const worker = await client.taskrouter.v1.workspaces(wrkspc).workers
       .create(jsonData);
+    const workerChannels = await client.taskrouter.v1.workspaces(wrkspc).workers(worker.sid).workerChannels.list();
+    await updateWorkerChannels(client, wrkspc, worker.sid, workerChannels, data.channelCaps);
+  }
+}
+
+async function updateWorkerChannels(client, wrkspc, workerSid, workerChannels, channelCaps) {
+  for (let i = 0; i < channelCaps.length; i++) {
+    const channelCap = channelCaps[i]
+    const { name, capacity } = channelCap;
+    const workerChannel = findObjInList('taskChannelUniqueName', name, workerChannels);
+    await await client.taskrouter.v1.workspaces(wrkspc).workers(workerSid).workerChannels(workerChannel.sid)
+      .update({ capacity })
   }
 }
 

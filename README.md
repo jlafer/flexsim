@@ -306,3 +306,4 @@ When using `flexsim` in a demo, here are some tips:
 ### 0.0.3
 - If the `valueProps` property for an instance of a value prop is omitted from your `domain.json` file, the `genconfig` script will evenly generate all of the values in the prop's `values` array.
 - The capacity of all workers for each channel can be specified in the domain file, using the `baseCapacity` property for each value in the `channel` prop's (only) instance.
+- All configuration and randomization logic has moved to a separate library package, [flexsim-lib](https://www.npmjs.com/package/flexsim-lib), so that it can be shared with the configuration UI (coming soon). The library code can be found at [jlafer/flexsim-lib](https://github.com/jlafer/flexsim-lib).

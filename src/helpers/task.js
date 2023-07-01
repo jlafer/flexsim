@@ -23,20 +23,57 @@ const fetchFlexsimTasks = async (ctx) => {
   return tasks;
 };
 
-const submitTask = async (ctx, valuesDescriptor) => {
+const submitTask = async (ctx, customer, valuesDescriptor) => {
   const { args, cfg, client, workflow, channels, propInstances, propValues } = ctx;
-  const { wrkspc } = args;
+  const { acct, wrkspc } = args;
   const channelProp = getSinglePropInstance('channel', propInstances);
   const channelName = getPropValue(propValues, valuesDescriptor.id, channelProp);
   const taskChannel = findObjInList('uniqueName', channelName, channels);
   const customAttrs = getAttributes(ctx, valuesDescriptor);
+  const from = {
+    country: 'US',
+    state: 'TX',
+    city: 'Houston',
+    zip: '44509'
+  };
+  const to = {
+    country: 'US',
+    state: 'NE',
+    city: 'Omaha',
+    zip: '65002'
+  };
   const task = await client.taskrouter.v1.workspaces(wrkspc).tasks
     .create(
       {
         taskChannel: taskChannel.sid,
         attributes: JSON.stringify({
           flexsim: cfg.metadata.brand,
-          name: valuesDescriptor.id,
+          name: customer.fullName,
+          'api_version': '2010-04-01',
+          'account_sid': acct,
+          'direction': 'inbound',
+          'call_status': '',
+          'call_sid': '',
+          'caller': '+12088747271',
+          'caller_country': from.country,
+          'caller_state': from.state,
+          'caller_city': from.city,
+          'caller_zip': from.zip,
+          'from': '+12088747271',
+          'from_country': from.country,
+          'from_state': from.state,
+          'from_city': from.city,
+          'from_zip': from.zip,
+          'called': '+18005551212',
+          'called_country': to.country,
+          'called_state': to.state,
+          'called_city': to.city,
+          'called_zip': to.zip,
+          'to': '+18005551212',
+          'to_country': to.country,
+          'to_state': to.state,
+          'to_city': to.city,
+          'to_zip': to.zip,
           ...customAttrs
         }),
         workflowSid: workflow.sid

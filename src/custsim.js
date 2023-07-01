@@ -19,10 +19,10 @@ async function run() {
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
   let now = Date.now();
   while (now < context.simStopTS) {
-    const fakerModule = localeToFakerModule(args.locale);
-    valuesDescriptor.id = fakerModule.person.fullName();
+    const customer = getFakeCustomer(args.locale);
+    valuesDescriptor.id = customer.fullName;
     calcPropsValues(context, valuesDescriptor);
-    const task = await submitTask(context, valuesDescriptor);
+    const task = await submitTask(context, customer, valuesDescriptor);
     console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
     const propAndInst = getSinglePropInstance('arrivalGap', propInstances);
     const arrivalGap = getPropValue(propValues, valuesDescriptor.id, propAndInst);
@@ -33,6 +33,13 @@ async function run() {
 }
 
 run();
+
+const getFakeCustomer = (locale) => {
+  const customer = {};
+  const fakerModule = localeToFakerModule(locale);
+  customer.fullName = fakerModule.person.fullName();
+  return customer;
+};
 
 async function loadTwilioResources(context) {
   context.workflow = await fetchWorkflow(context);

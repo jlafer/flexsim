@@ -1,11 +1,21 @@
 {
   "brand": "Owl Industries",
   "agentCnt": 20,
-  "queueFilterProp": "topic",
-  "queueWorkerProps": [
+  "center": {
+    "country": "US",
+    "state": "NE",
+    "city": "OMAHA",
+    "zip": "54321"
+  },
+  "customers": {
+    "country": "US",
+    "phoneFormat": "+1#########"
+  },
+  "queueFilterDim": "topic",
+  "queueWorkerDims": [
     "routing.skills"
   ],
-  "props": {
+  "dimensions": {
     "arrivalGap": {
       "dataType": "number",
       "expr": "range",
@@ -85,16 +95,19 @@
           "entity": "tasks",
           "phase": "arrive",
           "isAttribute": false,
-          "valueProps": [
+          "valueParams": [
             {
+              "address": "+18005551212",
               "portion": 0.34,
               "baseCapacity": 1
             },
             {
+              "address": "owlindustries.com",
               "portion": 0.33,
               "baseCapacity": 1
             },
             {
+              "address": "+18005551313",
               "portion": 0.33,
               "baseCapacity": 1
             }
@@ -115,7 +128,7 @@
           "entity": "workers",
           "phase": "activity",
           "isAttribute": false,
-          "valueProps": [
+          "valueParams": [
             {
               "baseDur": 90,
               "portion": 0.50
@@ -147,7 +160,7 @@
         {
           "entity": "tasks",
           "phase": "arrive",
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.20
             },
@@ -163,7 +176,7 @@
           "entity": "workers",
           "instName": "routing.skills",
           "valueCnt": 2,
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.20
             },
@@ -195,7 +208,7 @@
         {
           "entity": "tasks",
           "phase": "arrive",
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.10
             },

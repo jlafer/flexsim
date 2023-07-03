@@ -2,8 +2,8 @@ require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
 const {
-  calcActivityChange, calcPropsValues, findObjInList, formatDt, formatSid,
-  getAttributeFromJson, getPropValue, getSinglePropInstance, readJsonFile
+  calcActivityChange, calcDimsValues, findObjInList, formatDt, formatSid,
+  getAttributeFromJson, getDimValue, getSingleDimInstance, readJsonFile
 } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
@@ -33,8 +33,8 @@ async function init() {
     const { TaskAge, TaskSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
     const taskAttributes = JSON.parse(TaskAttributes);
     const workerAttributes = JSON.parse(WorkerAttributes);
-    addPropValuesFromReservation(context, TaskAge, taskAttributes, workerAttributes);
-    const { propValues, propInstances } = context;
+    addDimValuesFromReservation(context, TaskAge, taskAttributes, workerAttributes);
+    const { dimValues, dimInstances } = context;
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
     const now = Date.now();
@@ -45,11 +45,11 @@ async function init() {
     }
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
-    calcPropsValues(context, valuesDescriptor);
-    const talkTimeProp = getSinglePropInstance('talkTime', propInstances);
-    const talkTime = getPropValue(propValues, valuesDescriptor.id, talkTimeProp);
-    const wrapTimeProp = getSinglePropInstance('wrapTime', propInstances);
-    const wrapTime = getPropValue(propValues, valuesDescriptor.id, wrapTimeProp);
+    calcDimsValues(context, valuesDescriptor);
+    const talkTimeDim = getSingleDimInstance('talkTime', dimInstances);
+    const talkTime = getDimValue(dimValues, valuesDescriptor.id, talkTimeDim);
+    const wrapTimeDim = getSingleDimInstance('wrapTime', dimInstances);
+    const wrapTime = getDimValue(dimValues, valuesDescriptor.id, wrapTimeDim);
 
     setTimeout(
       function () {
@@ -77,7 +77,7 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime, taskAt
       const now = Date.now();
       console.log(formatDt(now));
       const valuesDescriptor = { entity: 'tasks', phase: 'complete', id: custName };
-      calcPropsValues(context, valuesDescriptor);
+      calcDimsValues(context, valuesDescriptor);
       console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
       completeTask(context, TaskSid, taskAttributes, valuesDescriptor);
       R.dissoc(TaskSid, context.tasks);
@@ -123,13 +123,13 @@ async function loadTwilioResources(context) {
   context.workers = await fetchFlexsimWorkers(context);
 }
 
-const addPropValuesFromReservation = (context, TaskAge, taskAttributes, workerAttributes) => {
+const addDimValuesFromReservation = (context, TaskAge, taskAttributes, workerAttributes) => {
   const taskData = { waitTime: TaskAge, ...taskAttributes };
   const custName = taskData.name;
   const workerData = { ...workerAttributes };
   const workerName = workerData.full_name;
-  context.propValues.tasks[custName] = taskData;
-  context.propValues.workers[workerName] = workerData;
+  context.dimValues.tasks[custName] = taskData;
+  context.dimValues.workers[workerName] = workerData;
 };
 
 const initializeContext = (cfg, args) => {

@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { calcPropsValues, formatDt, formatSid, getPropValue, getSinglePropInstance, localeToFakerModule, readJsonFile } = require('flexsim-lib');
+const { calcDimsValues, formatDt, formatSid, getDimValue, getSingleDimInstance, localeToFakerModule, readJsonFile } = require('flexsim-lib');
 
 const { parseAndValidateArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
@@ -13,19 +13,19 @@ async function run() {
   const cfg = await readConfiguration(args);
   console.log('cfg:', cfg);
   const context = initializeContext(cfg, args);
-  const { propValues, propInstances } = context;
+  const { dimValues, dimInstances } = context;
   await loadTwilioResources(context);
   console.log(`read workflow: ${context.workflow.friendlyName}`);
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
   let now = Date.now();
   while (now < context.simStopTS) {
-    const customer = getFakeCustomer(args.locale);
+    const customer = getFakeCustomer(args.locale, cfg.metadata.customers);
     valuesDescriptor.id = customer.fullName;
-    calcPropsValues(context, valuesDescriptor);
+    calcDimsValues(context, valuesDescriptor);
     const task = await submitTask(context, customer, valuesDescriptor);
     console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
-    const propAndInst = getSinglePropInstance('arrivalGap', propInstances);
-    const arrivalGap = getPropValue(propValues, valuesDescriptor.id, propAndInst);
+    const dimAndInst = getSingleDimInstance('arrivalGap', dimInstances);
+    const arrivalGap = getDimValue(dimValues, valuesDescriptor.id, dimAndInst);
     await delay(arrivalGap * 1000);
     now = Date.now();
   }
@@ -34,11 +34,25 @@ async function run() {
 
 run();
 
-const getFakeCustomer = (locale) => {
-  const customer = {};
+const getFakeCustomer = (locale, customers) => {
+  const { country, phoneFormat } = customers;
   const fakerModule = localeToFakerModule(locale);
+
+  const customer = {};
   customer.fullName = fakerModule.person.fullName();
+  customer.country = country;
+  customer.phone = makePhoneNumber(fakerModule, locale, phoneFormat);
+  customer.state = fakerModule.location.state({ abbreviated: true });
+  customer.city = fakerModule.location.city();
+  customer.zip = fakerModule.location.zipCode('#####');
   return customer;
+};
+
+const makePhoneNumber = (fakerModule, locale, phoneFormat) => {
+  let phone = fakerModule.phone.number(phoneFormat);
+  if (locale === 'en-us' && ['0', '1'].includes(phone.charAt(2)))
+    phone = `+12${phone.substring(3)}`;
+  return phone;
 };
 
 async function loadTwilioResources(context) {

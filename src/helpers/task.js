@@ -1,6 +1,6 @@
 const R = require('ramda');
 const {
-  findObjInList, formatSid, getAttributes, getPropValue, getSinglePropInstance, hasAttributeValue
+  findObjInList, formatSid, getAttributes, getDimValue, getDimValueParam, getSingleDimInstance, hasAttributeValue
 } = require('flexsim-lib');
 
 const fetchTask = async (ctx, sid) => {
@@ -24,63 +24,58 @@ const fetchFlexsimTasks = async (ctx) => {
 };
 
 const submitTask = async (ctx, customer, valuesDescriptor) => {
-  const { args, cfg, client, workflow, channels, propInstances, propValues } = ctx;
+  const { args, cfg, client, workflow, channels, dimInstances, dimValues } = ctx;
   const { acct, wrkspc } = args;
-  const channelProp = getSinglePropInstance('channel', propInstances);
-  const channelName = getPropValue(propValues, valuesDescriptor.id, channelProp);
+  const { phone: from, fullName, country, state, city, zip } = customer;
+  const channelDim = getSingleDimInstance('channel', dimInstances);
+  const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDim);
+  const channelAddress = getDimValueParam('address', channelName, channelDim);
   const taskChannel = findObjInList('uniqueName', channelName, channels);
   const customAttrs = getAttributes(ctx, valuesDescriptor);
-  const from = {
-    country: 'US',
-    state: 'TX',
-    city: 'Houston',
-    zip: '44509'
-  };
-  const to = {
-    country: 'US',
-    state: 'NE',
-    city: 'Omaha',
-    zip: '65002'
-  };
+  const { metadata } = cfg;
+  const { brand, center } = metadata;
   const task = await client.taskrouter.v1.workspaces(wrkspc).tasks
     .create(
       {
         taskChannel: taskChannel.sid,
         attributes: JSON.stringify({
-          flexsim: cfg.metadata.brand,
-          name: customer.fullName,
+          flexsim: brand,
+          name: fullName,
           'api_version': '2010-04-01',
           'account_sid': acct,
           'direction': 'inbound',
           'call_status': '',
           'call_sid': '',
-          'caller': '+12088747271',
-          'caller_country': from.country,
-          'caller_state': from.state,
-          'caller_city': from.city,
-          'caller_zip': from.zip,
-          'from': '+12088747271',
-          'from_country': from.country,
-          'from_state': from.state,
-          'from_city': from.city,
-          'from_zip': from.zip,
-          'called': '+18005551212',
-          'called_country': to.country,
-          'called_state': to.state,
-          'called_city': to.city,
-          'called_zip': to.zip,
-          'to': '+18005551212',
-          'to_country': to.country,
-          'to_state': to.state,
-          'to_city': to.city,
-          'to_zip': to.zip,
+          'caller': from,
+          'caller_country': country,
+          'caller_state': state,
+          'caller_city': city,
+          'caller_zip': zip,
+          'from': from,
+          'from_country': country,
+          'from_state': state,
+          'from_city': city,
+          'from_zip': zip,
+          'called': channelAddress,
+          'called_country': center.country,
+          'called_state': center.state,
+          'called_city': center.city,
+          'called_zip': center.zip,
+          'to': channelAddress,
+          'to_country': center.country,
+          'to_state': center.state,
+          'to_city': center.city,
+          'to_zip': center.zip,
+          customers: {
+            name: fullName
+          },
           ...customAttrs
         }),
         workflowSid: workflow.sid
       }
     );
-  const abandonTimeProp = getSinglePropInstance('abandonTime', propInstances);
-  const abandonTime = getPropValue(propValues, valuesDescriptor.id, abandonTimeProp);
+  const abandonTimeDim = getSingleDimInstance('abandonTime', dimInstances);
+  const abandonTime = getDimValue(dimValues, valuesDescriptor.id, abandonTimeDim);
   setTimeout(
     function () {
       cancelTask(ctx, task.sid);

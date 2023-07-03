@@ -15,7 +15,7 @@ async function createQueues(ctx) {
   for (let i = 0; i < cfgQueues.length; i++) {
     const data = cfgQueues[i];
     const queue = await client.taskrouter.v1.workspaces(wrkspc).taskQueues.create(data);
-    console.log('createQueues:', getKeyProps(queue));
+    console.log('createQueues:', pickKeyProps(queue));
     queues.push(queue);
   }
   queues.push(everyoneQueue);
@@ -36,7 +36,7 @@ async function removeQueues(ctx) {
   }
 }
 
-function getKeyProps(queue) {
+function pickKeyProps(queue) {
   return R.pick(['sid', 'friendlyName', 'targetWorkers'], queue);
 }
 

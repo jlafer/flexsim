@@ -1,11 +1,11 @@
 {
   "brand": "ACME",
   "agentCnt": 10,
-  "queueFilterProp": "topic",
-  "queueWorkerProps": [
+  "queueFilterDim": "topic",
+  "queueWorkerDims": [
     "routing.skills"
   ],
-  "props": {
+  "dimensions": {
     "talkTime": {
       "dataType": "number",
       "expr": "range",
@@ -71,7 +71,7 @@
         {
           "entity": "tasks",
           "phase": "arrive",
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.20
             },
@@ -90,7 +90,7 @@
           "entity": "workers",
           "instName": "routing.skills",
           "valueCnt": 2,
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.20
             },

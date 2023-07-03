@@ -1,4 +1,4 @@
-const { checkDomain, getPropInstances } = require('flexsim-lib');
+const { checkDomain, getDimInstances } = require('flexsim-lib');
 const seedrandom = require('seedrandom');
 
 const initializeCommonContext = (cfg, args) => {
@@ -9,9 +9,9 @@ const initializeCommonContext = (cfg, args) => {
   const { metadata } = cfg;
   checkDomain(metadata);
   console.log(`initializeCommonContext: rand = ${rng()}`)
-  context.propValues = { tasks: {}, workers: {} };
+  context.dimValues = { tasks: {}, workers: {} };
   context.client = require('twilio')(acct, auth);
-  context.propInstances = getPropInstances(cfg.metadata.props);
+  context.dimInstances = getDimInstances(cfg.metadata.dimensions);
   return context;
 }
 

@@ -1,11 +1,21 @@
 {
   "brand": "ACME",
   "agentCnt": 20,
-  "queueFilterProp": "topic",
-  "queueWorkerProps": [
+  "queueFilterDim": "topic",
+  "customers": {
+    "country": "US",
+    "phoneFormat": "+1#########"
+  },
+  "center": {
+    "country": "US",
+    "state": "IL",
+    "city": "SPRINGFIELD",
+    "zip": "12345"
+  },
+  "queueWorkerDims": [
     "routing.skills"
   ],
-  "props": {
+  "dimensions": {
     "arrivalGap": {
       "dataType": "number",
       "expr": "range",
@@ -110,16 +120,19 @@
           "entity": "tasks",
           "phase": "arrive",
           "isAttribute": false,
-          "valueProps": [
+          "valueParams": [
             {
+              "address": "+18885551212",
               "portion": 0.5,
               "baseCapacity": 1
             },
             {
+              "address": "acme.com",
               "portion": 0.3,
               "baseCapacity": 2
             },
             {
+              "address": "+18885551313",
               "portion": 0.2,
               "baseCapacity": 2
             }
@@ -140,7 +153,7 @@
           "entity": "workers",
           "phase": "activity",
           "isAttribute": false,
-          "valueProps": [
+          "valueParams": [
             {
               "baseDur": 90,
               "portion": 0.50
@@ -173,7 +186,7 @@
         {
           "entity": "tasks",
           "phase": "arrive",
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.20
             },
@@ -192,7 +205,7 @@
           "entity": "workers",
           "instName": "routing.skills",
           "valueCnt": 2,
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.20
             },
@@ -221,7 +234,7 @@
         {
           "entity": "tasks",
           "phase": "arrive",
-          "valueProps": [
+          "valueParams": [
             {
               "portion": 0.20
             },

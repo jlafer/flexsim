@@ -1,10 +1,10 @@
 const R = require('ramda');
 const seedrandom = require('seedrandom');
 
-const { calcPropsValues, calcValue } = require('../helpers/calcs');
+const { calcDimsValues, calcValue } = require('../helpers/calcs');
 
-const overridePropInstance = (basePropInst, name, overrides) => {
-  const clone = R.clone(basePropInst);
+const overrideDimInstance = (baseDimInst, name, overrides) => {
+  const clone = R.clone(baseDimInst);
   clone.name = name;
   clone.instName = name;
   const res = R.mergeRight(clone, overrides);
@@ -17,7 +17,7 @@ const makeCtx = (other) => {
   return ctx;
 };
 
-const enumPropBase = {
+const enumDimBase = {
   "dataType": "string",
   "expr": "enum",
   "values": [
@@ -35,7 +35,7 @@ const enumPropBase = {
   "isAttribute": false,
   "influences": [],
   "valueCnt": 1,
-  "valueProps": [
+  "valueParams": [
     {
       "baseDur": 90,
       "portion": 0.25
@@ -55,14 +55,14 @@ const enumPropBase = {
   ]
 };
 
-const rangePropBase = {
-  "name": "testRangeProp",
+const rangeDimBase = {
+  "name": "testRangeDim",
   "dataType": "integer",
   "expr": "range",
   "min": 0,
   "max": 100,
   "entity": "tasks",
-  "instName": "testRangeProp",
+  "instName": "testRangeDim",
   "phase": "assign",
   "curve": "bell",
   "isAttribute": true,
@@ -70,11 +70,11 @@ const rangePropBase = {
   "valueCnt": 1,
 };
 
-const prereq1 = overridePropInstance(rangePropBase, 'prereq1', { phase: 'arrive' });
-const prereq2 = overridePropInstance(rangePropBase, 'prereq2', { phase: 'arrive' });
-const prereq3 = overridePropInstance(rangePropBase, 'prereq3', { phase: 'arrive' });
+const prereq1 = overrideDimInstance(rangeDimBase, 'prereq1', { phase: 'arrive' });
+const prereq2 = overrideDimInstance(rangeDimBase, 'prereq2', { phase: 'arrive' });
+const prereq3 = overrideDimInstance(rangeDimBase, 'prereq3', { phase: 'arrive' });
 
-const bellShiftProp = overridePropInstance(rangePropBase, 'bellShift', {
+const bellShiftDim = overrideDimInstance(rangeDimBase, 'bellShift', {
   phase: 'assign',
   influences: [
     {
@@ -89,8 +89,8 @@ const piBase = [
   prereq1,
   prereq2,
   prereq3,
-  rangePropBase,
-  enumPropBase
+  rangeDimBase,
+  enumDimBase
 ];
 
 const id = 'abcde';
@@ -110,35 +110,35 @@ const tasksValuesDescriptor = { entity: 'tasks', phase: 'assign', id };
 
 
 test('calculates an enum value', () => {
-  const ctx = makeCtx({ propInstances: piBase, propValues: pvBase });
+  const ctx = makeCtx({ dimInstances: piBase, dimValues: pvBase });
   const expected = { activity: 'Busy' };
-  const res = calcPropsValues(ctx, workersValuesDescriptor);
+  const res = calcDimsValues(ctx, workersValuesDescriptor);
   expect(res).toStrictEqual(expected);
 });
 
 test('calculates a range-bell value', () => {
-  const ctx = makeCtx({ propInstances: piBase, propValues: pvBase });
-  const expected = { testRangeProp: 58 };
-  const res = calcPropsValues(ctx, tasksValuesDescriptor);
+  const ctx = makeCtx({ dimInstances: piBase, dimValues: pvBase });
+  const expected = { testRangeDim: 58 };
+  const res = calcDimsValues(ctx, tasksValuesDescriptor);
   expect(res).toStrictEqual(expected);
 });
 
 test('calculates a range-bell value with a shift', () => {
-  const propInstances = [prereq1, bellShiftProp];
-  const ctx = makeCtx({ propInstances, propValues: pvBase });
+  const dimInstances = [prereq1, bellShiftDim];
+  const ctx = makeCtx({ dimInstances, dimValues: pvBase });
   const expected = { bellShift: 63 };
-  const res = calcPropsValues(ctx, tasksValuesDescriptor);
+  const res = calcDimsValues(ctx, tasksValuesDescriptor);
   expect(res).toStrictEqual(expected);
 });
 
 test('calculates many range-bell values accurately', () => {
-  const ctx = makeCtx({ propInstances: piBase, propValues: pvBase });
-  const propAndInst = rangePropBase;
+  const ctx = makeCtx({ dimInstances: piBase, dimValues: pvBase });
+  const dimAndInst = rangeDimBase;
   const count = 1000;
   const expected = 50;
   let sum = 0;
   for (let i = 0; i < count; i++) {
-    const value = calcValue(ctx, tasksValuesDescriptor, propAndInst);
+    const value = calcValue(ctx, tasksValuesDescriptor, dimAndInst);
     //console.log(value);
     sum = sum + value;
   }
@@ -147,14 +147,14 @@ test('calculates many range-bell values accurately', () => {
 });
 
 test('calculates many bell-shifted values accurately', () => {
-  const propInstances = [prereq1, bellShiftProp];
-  const ctx = makeCtx({ propInstances, propValues: pvBase });
-  const propAndInst = bellShiftProp;
+  const dimInstances = [prereq1, bellShiftDim];
+  const ctx = makeCtx({ dimInstances, dimValues: pvBase });
+  const dimAndInst = bellShiftDim;
   const count = 1000;
   const expected = 55;
   let sum = 0;
   for (let i = 0; i < count; i++) {
-    const value = calcValue(ctx, tasksValuesDescriptor, propAndInst);
+    const value = calcValue(ctx, tasksValuesDescriptor, dimAndInst);
     sum = sum + value;
   }
   const res = Math.round(sum / count);

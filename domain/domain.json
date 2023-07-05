@@ -1,6 +1,6 @@
 {
   "brand": "ACME",
-  "agentCnt": 20,
+  "agentCnt": 2,
   "queueFilterDim": "topic",
   "customers": {
     "country": "US",

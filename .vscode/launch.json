@@ -41,6 +41,21 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "FlexSim",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/src/flexsim.js",
+      "args": [
+        "-c",
+        "config",
+        "-t",
+        "60"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "CustSim",
       "skipFiles": [
         "<node_internals>/**"
@@ -48,9 +63,7 @@
       "program": "${workspaceFolder}/src/custsim.js",
       "args": [
         "-c",
-        "config",
-        "-t",
-        "60"
+        "config"
       ]
     },
     {

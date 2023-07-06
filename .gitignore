@@ -4,3 +4,5 @@ TODO.txt
 config/
 testWorker.json
 samples.json
+ngrok.yaml
+simngrok.sh

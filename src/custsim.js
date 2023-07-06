@@ -1,14 +1,15 @@
 require("dotenv").config();
-const { calcDimsValues, formatDt, formatSid, getDimValue, getSingleDimInstance, localeToFakerModule, readJsonFile } = require('flexsim-lib');
+const express = require('express');
+const { readJsonFile } = require('flexsim-lib');
+const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
 const { parseAndValidateArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
-const {submitTask} = require('./helpers/task');
-const { delay } = require('./helpers/util');
+const { makeCall } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
 
-async function run() {
+async function init() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
   console.log('cfg:', cfg);
@@ -17,43 +18,49 @@ async function run() {
   await loadTwilioResources(context);
   console.log(`read workflow: ${context.workflow.friendlyName}`);
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
-  let now = Date.now();
-  while (now < context.simStopTS) {
-    const customer = getFakeCustomer(args.locale, cfg.metadata.customers);
-    valuesDescriptor.id = customer.fullName;
-    calcDimsValues(context, valuesDescriptor);
-    const task = await submitTask(context, customer, valuesDescriptor);
-    console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
-    const dimAndInst = getSingleDimInstance('arrivalGap', dimInstances);
-    const arrivalGap = getDimValue(dimValues, valuesDescriptor.id, dimAndInst);
-    await delay(arrivalGap * 1000);
-    now = Date.now();
-  }
-  console.log('custsim finished at', formatDt(now));
+
+  const app = express();
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  app.post('/makeCustomerCall', async (req, res) => {
+    console.log('custsim:makeCustomerCall: making a call');
+    const { client, args } = context;
+    const { customer } = req.body;
+    const ixn = { name: customer.fullName };
+    const from = '+15072747105';
+    const to = '+16292091380';
+    const callSid = await makeCall(client, from, to, `${args.custsimHost}/callConnected`);
+    res.send({ callSid, ixn });
+  });
+
+  app.post('/callConnected', async (req, res) => {
+    console.log('custsim:callConnected: customer call connected to the IVR');
+    const { client, args } = context;
+    const twiml = new VoiceResponse();
+    twiml.say('Hi.');
+    twiml.pause({
+      length: 5
+    });
+    twiml.say('I am the customer. And I need some help.');
+    twiml.pause({
+      length: 5
+    });
+    twiml.say('I just paused for another five seconds. Now I will wait for an agent, who will hangup.');
+    twiml.pause({
+      length: 15
+    });
+    twiml.say("It looks like nobody can help me. I'm falling and I can't get up.");
+    res.type('text/xml');
+    res.send(twiml.toString());
+  });
+
+  app.listen(args.port, () => {
+    console.log(`custsim listening on port ${args.port}`)
+  });
 }
 
-run();
-
-const getFakeCustomer = (locale, customers) => {
-  const { country, phoneFormat } = customers;
-  const fakerModule = localeToFakerModule(locale);
-
-  const customer = {};
-  customer.fullName = fakerModule.person.fullName();
-  customer.country = country;
-  customer.phone = makePhoneNumber(fakerModule, locale, phoneFormat);
-  customer.state = fakerModule.location.state({ abbreviated: true });
-  customer.city = fakerModule.location.city();
-  customer.zip = fakerModule.location.zipCode('#####');
-  return customer;
-};
-
-const makePhoneNumber = (fakerModule, locale, phoneFormat) => {
-  let phone = fakerModule.phone.number(phoneFormat);
-  if (locale === 'en-us' && ['0', '1'].includes(phone.charAt(2)))
-    phone = `+12${phone.substring(3)}`;
-  return phone;
-};
+init();
 
 async function loadTwilioResources(context) {
   context.workflow = await fetchWorkflow(context);
@@ -68,22 +75,26 @@ const initializeContext = (cfg, args) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', l: 'locale' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', l: 'locale', p: 'port' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, CUSTSIM_HOST, CUSTSIM_PORT } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
   args.timeLim = args.timeLim || 3600;
   args.locale = args.locale || 'en-us';
-  const { acct, wrkspc, cfgdir, timeLim, locale } = args;
+  args.custsimHost = CUSTSIM_HOST;
+  args.port = args.port || CUSTSIM_PORT || 3001;
+  const { acct, wrkspc, cfgdir, timeLim, locale, custsimHost, port } = args;
   console.log('acct:', acct);
   console.log('wrkspc:', wrkspc);
   console.log('cfgdir:', cfgdir);
   console.log('timeLim:', timeLim);
   console.log('locale:', locale);
+  console.log('custsimHost:', custsimHost);
+  console.log('port:', port);
   return args;
 }
 

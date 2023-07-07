@@ -1,6 +1,8 @@
 require("dotenv").config();
 const axios = require('axios');
-const { calcDimsValues, formatDt, formatSid, getDimValue, getSingleDimInstance, localeToFakerModule, readJsonFile } = require('flexsim-lib');
+const {
+  calcDimsValues, formatDt, formatSid, getAttributes, getDimValue, getSingleDimInstance, localeToFakerModule, readJsonFile
+} = require('flexsim-lib');
 
 const { parseAndValidateArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
@@ -29,7 +31,7 @@ async function run() {
     const channelName = 'voice';
     //const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDimAndInst);
     if (channelName === 'voice') {
-      const data = await submitInteraction(context, customer);
+      const data = await submitInteraction(context, customer, valuesDescriptor);
       console.log(`flexsim: made call ${formatSid(data.callSid)} at`, formatDt(now));
     }
     else {
@@ -45,18 +47,23 @@ async function run() {
 
 run();
 
-const submitInteraction = async (ctx, customer) => {
+const submitInteraction = async (ctx, customer, valuesDescriptor) => {
   const { args, client, syncMap } = ctx;
+  const customAttrs = getAttributes(ctx, valuesDescriptor);
   const { custsimHost, syncSvcSid } = args;
+  const digits = '42';
   const config = {
     method: 'post',
     url: `${custsimHost}/makeCustomerCall`,
-    data: { customer }
+    data: {
+      ...customAttrs, sendDigits: `wwwww${digits}#`
+    }
   };
   const response = await axios.request(config);
   const { data } = response;
-  const item = { key: data.callSid, data, itemTtl: 10 };
-  createSyncMapItem(client, syncSvcSid, syncMap.sid, item)
+  const item = { key: digits, data: customAttrs, itemTtl: 120 };
+  createSyncMapItem(client, syncSvcSid, syncMap.sid, item);
+  console.log(`saved ixn data into Sync map for call ${data.callSid}`, customAttrs);
   return data;
 };
 

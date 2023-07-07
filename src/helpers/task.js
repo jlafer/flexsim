@@ -97,10 +97,11 @@ const wrapupTask = (ctx, taskSid) => {
   setTaskStatus('wrapping', ctx, taskSid);
 };
 
-const completeTask = async (ctx, taskSid, taskAttributes, valuesDescriptor) => {
-  const attributes = getAttributes(ctx, valuesDescriptor);
-  const finalAttributes = R.mergeDeepRight(taskAttributes, attributes);
-  let task = await setTaskStatus('completed', ctx, taskSid);
+const completeTask = async (ctx, taskSid, valuesDescriptor) => {
+  let task = await fetchTask(ctx, taskSid);
+  const completionAttributes = getAttributes(ctx, valuesDescriptor);
+  const finalAttributes = R.mergeDeepRight(task.attributes, completionAttributes);
+  task = await setTaskStatus('completed', ctx, taskSid);
   console.log(`task completion for ${task.sid}`);
   task = await updateTaskAttributes(ctx, taskSid, finalAttributes);
   console.log(`${task.sid} now has attributes:`, task.attributes);

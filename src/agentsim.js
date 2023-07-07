@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
+const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
   calcActivityChange, calcDimsValues, findObjInList, formatDt, formatSid,
   getAttributeFromJson, getDimValue, getSingleDimInstance, readJsonFile
@@ -30,11 +31,14 @@ async function init() {
   })
 
   app.post('/reservation', (req, res) => {
-    const { TaskAge, TaskSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
+    const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
     const taskAttributes = JSON.parse(TaskAttributes);
     const workerAttributes = JSON.parse(WorkerAttributes);
+    const from = '+15072747105';
+    const to = '+18148134754';
+
     addDimValuesFromReservation(context, TaskAge, taskAttributes, workerAttributes);
-    const { dimValues, dimInstances } = context;
+    const { args, client, dimValues, dimInstances } = context;
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
     const now = Date.now();
@@ -56,12 +60,41 @@ async function init() {
         const now = Date.now();
         console.log(formatDt(now));
         console.log(`  ${friendlyName} wrapping task ${formatSid(TaskSid)}`);
-        doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime, taskAttributes);
+        doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime);
       },
       (talkTime * 1000)
     );
-    res.send({ instruction: 'accept' });
+    client.taskrouter.v1.workspaces(args.wrkspc)
+      .tasks(TaskSid)
+      .reservations(ReservationSid)
+      .update({
+        instruction: 'conference',
+        from: from,
+        to: to,
+        endConferenceOnExit: true
+      });
+    res.status(200).send({});
   })
+
+  app.post('/agentJoined', (req, res) => {
+    console.log('agent:agentJoined: the agent has joined the conference');
+    const twiml = new VoiceResponse();
+    twiml.say('Hi.');
+    twiml.pause({
+      length: 5
+    });
+    twiml.say('I am the agent. How can I help?');
+    twiml.pause({
+      length: 5
+    });
+    twiml.say('I just paused for another five seconds.');
+    twiml.pause({
+      length: 30
+    });
+    twiml.say('It was my pleasure to help.');
+    res.type('text/xml');
+    res.send(twiml.toString());
+  });
 
   app.listen(args.port, () => {
     console.log(`agentsim listening on port ${args.port}`)
@@ -70,7 +103,7 @@ async function init() {
 
 init();
 
-const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime, taskAttributes) => {
+const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
   wrapupTask(context, TaskSid);
   setTimeout(
     function () {
@@ -79,7 +112,7 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime, taskAt
       const valuesDescriptor = { entity: 'tasks', phase: 'complete', id: custName };
       calcDimsValues(context, valuesDescriptor);
       console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
-      completeTask(context, TaskSid, taskAttributes, valuesDescriptor);
+      completeTask(context, TaskSid, valuesDescriptor);
       R.dissoc(TaskSid, context.tasks);
     },
     (wrapTime * 1000)

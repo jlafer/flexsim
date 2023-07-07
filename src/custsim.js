@@ -26,12 +26,11 @@ async function init() {
   app.post('/makeCustomerCall', async (req, res) => {
     console.log('custsim:makeCustomerCall: making a call');
     const { client, args } = context;
-    const { customer } = req.body;
-    const ixn = { name: customer.fullName };
+    const { sendDigits, ...data } = req.body;
     const from = '+15072747105';
     const to = '+16292091380';
-    const callSid = await makeCall(client, from, to, `${args.custsimHost}/callConnected`);
-    res.send({ callSid, ixn });
+    const callSid = await makeCall(client, from, to, sendDigits, `${args.custsimHost}/callConnected`);
+    res.send({ callSid });
   });
 
   app.post('/callConnected', async (req, res) => {

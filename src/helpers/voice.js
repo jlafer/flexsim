@@ -1,6 +1,6 @@
-const makeCall = async (client, from, to, url) => {
+const makeCall = async (client, from, to, sendDigits, url) => {
   const call = await client.calls
-    .create({ from, to, url });
+    .create({ from, to, sendDigits, url });
   return call.sid;
 };
 

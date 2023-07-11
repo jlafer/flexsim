@@ -1,6 +1,6 @@
 {
   "brand": "ACME",
-  "agentCnt": 2,
+  "agentCnt": 4,
   "queueFilterDim": "topic",
   "customers": {
     "country": "US",
@@ -122,7 +122,7 @@
           "isAttribute": false,
           "valueParams": [
             {
-              "address": "+18885551212",
+              "address": "+18148134754",
               "portion": 0.5,
               "baseCapacity": 1
             },
@@ -132,7 +132,7 @@
               "baseCapacity": 2
             },
             {
-              "address": "+18885551313",
+              "address": "+18148134754",
               "portion": 0.2,
               "baseCapacity": 2
             }

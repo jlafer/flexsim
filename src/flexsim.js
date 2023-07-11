@@ -1,7 +1,7 @@
 require("dotenv").config();
 const axios = require('axios');
 const {
-  calcDimsValues, formatDt, formatSid, getAttributes, getDimValue, getSingleDimInstance, localeToFakerModule, readJsonFile
+  calcDimsValues, formatDt, formatSid, getAttributes, getDimValue, getDimValues, getSingleDimInstance, localeToFakerModule, readJsonFile
 } = require('flexsim-lib');
 
 const { parseAndValidateArgs } = require('./helpers/args');
@@ -17,8 +17,8 @@ async function run() {
   const cfg = await readConfiguration(args);
   console.log('cfg:', cfg);
   const context = initializeContext(cfg, args);
-  const { dimValues, dimInstances } = context;
   await loadTwilioResources(context);
+  const { client, dimValues, dimInstances, syncMap } = context;
   console.log(`read workflow: ${context.workflow.friendlyName}`);
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
   const arrivalDimAndInst = getSingleDimInstance('arrivalGap', dimInstances);
@@ -28,43 +28,42 @@ async function run() {
     const customer = getFakeCustomer(args.locale, cfg.metadata.customers);
     valuesDescriptor.id = customer.fullName;
     calcDimsValues(context, valuesDescriptor);
-    const channelName = 'voice';
-    //const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDimAndInst);
+    const ixnId = getAndAdvanceIxnId(context);
+    const ixnValues = getDimValues(context, valuesDescriptor);
+    const customAttrs = getAttributes(context, valuesDescriptor);
+    const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDimAndInst);
+    const item = { key: ixnId, data: { taskStatus: 'initiated', ixnValues, attributes: customAttrs, customer }, itemTtl: 240 };
+    const syncMapItem = await createSyncMapItem(client, args.syncSvcSid, syncMap.sid, item);
     if (channelName === 'voice') {
-      const data = await submitInteraction(context, customer, valuesDescriptor);
-      console.log(`flexsim: made call ${formatSid(data.callSid)} at`, formatDt(now));
+      const callSid = await submitInteraction(context, ixnId, customer, valuesDescriptor);
+      console.log(`flexsim: made call ${formatSid(callSid)} at`, formatDt(now));
     }
     else {
-      const task = await submitTask(context, customer, valuesDescriptor);
-      console.log(`new task ${formatSid(task.sid)} at`, formatDt(now));
+      const task = await submitTask(context, ixnId, customer, valuesDescriptor);
+      console.log(`flexsim: made task ${formatSid(task.sid)} at`, formatDt(now));
     }
     const arrivalGap = getDimValue(dimValues, valuesDescriptor.id, arrivalDimAndInst);
     await delay(arrivalGap * 1000);
     now = Date.now();
   }
-  console.log('custsim finished at', formatDt(now));
+  console.log('flexsim finished at', formatDt(now));
 }
 
 run();
 
-const submitInteraction = async (ctx, customer, valuesDescriptor) => {
-  const { args, client, syncMap } = ctx;
-  const customAttrs = getAttributes(ctx, valuesDescriptor);
-  const { custsimHost, syncSvcSid } = args;
-  const digits = '42';
+const submitInteraction = async (ctx, ixnId, customer, valuesDescriptor) => {
+  const { args } = ctx;
+  const { custsimHost } = args;
   const config = {
     method: 'post',
     url: `${custsimHost}/makeCustomerCall`,
     data: {
-      ...customAttrs, sendDigits: `wwwww${digits}#`
+      ixnId
     }
   };
   const response = await axios.request(config);
   const { data } = response;
-  const item = { key: digits, data: customAttrs, itemTtl: 120 };
-  createSyncMapItem(client, syncSvcSid, syncMap.sid, item);
-  console.log(`saved ixn data into Sync map for call ${data.callSid}`, customAttrs);
-  return data;
+  return data.callSid;
 };
 
 const getFakeCustomer = (locale, customers) => {
@@ -98,6 +97,7 @@ async function loadTwilioResources(context) {
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
   context.simStopTS = context.simStartTS + (args.timeLim * 1000);
+  context.ixnId = 0;
   return context;
 }
 
@@ -131,4 +131,9 @@ async function readConfiguration(args) {
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   const workflow = await readJsonFile(`${cfgdir}/workflow.json`);
   return { metadata, workflow };
+}
+
+function getAndAdvanceIxnId(context) {
+  context.ixnId = context.ixnId + 1;
+  return context.ixnId;
 }

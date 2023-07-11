@@ -4,13 +4,14 @@ const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
   calcActivityChange, calcDimsValues, findObjInList, formatDt, formatSid,
-  getAttributeFromJson, getDimValue, getSingleDimInstance, readJsonFile
+  getAttributeFromJson, getDimValue, getDimValueParam, getSingleDimInstance, readJsonFile
 } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
-const { completeTask, wrapupTask } = require('./helpers/task');
+const { getOrCreateSyncMap, getSyncMapItem, updateSyncMapItem } = require('./helpers/sync');
+const { completeTask, startConference, wrapupTask } = require('./helpers/task');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -30,23 +31,25 @@ async function init() {
     res.send('Hello World!')
   })
 
-  app.post('/reservation', (req, res) => {
+  app.post('/reservation', async (req, res) => {
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
     const taskAttributes = JSON.parse(TaskAttributes);
+    const { ixnId } = taskAttributes;
     const workerAttributes = JSON.parse(WorkerAttributes);
-    const from = '+15072747105';
-    const to = '+18148134754';
-
-    addDimValuesFromReservation(context, TaskAge, taskAttributes, workerAttributes);
-    const { args, client, dimValues, dimInstances } = context;
+    const { args, client, syncMap } = context;
+    const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
+    const { data } = ixnDataItem;
+    const newData = { ...data, taskSid: TaskSid, taskStatus: 'reserved' };
+    updateSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId, { data: newData });
+    const { ixnValues, customer } = newData;
+    const { fullName: custName } = customer;
+    addTaskValuesFromSync(context, custName, ixnValues);
+    addDimValuesFromReservation(context, custName, TaskAge, workerAttributes);
+    const { dimValues, dimInstances } = context;
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
     const now = Date.now();
     console.log(formatDt(now));
-    const custName = getAttributeFromJson(TaskAttributes, 'name');
-    if (!custName) {
-      throw new Error(`a task ${TaskSid} with no name???`);
-    }
     console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
     calcDimsValues(context, valuesDescriptor);
@@ -54,6 +57,9 @@ async function init() {
     const talkTime = getDimValue(dimValues, valuesDescriptor.id, talkTimeDim);
     const wrapTimeDim = getSingleDimInstance('wrapTime', dimInstances);
     const wrapTime = getDimValue(dimValues, valuesDescriptor.id, wrapTimeDim);
+    const channelDim = getSingleDimInstance('channel', dimInstances);
+    const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDim);
+    const channelAddress = getDimValueParam('address', channelName, channelDim);
 
     setTimeout(
       function () {
@@ -64,16 +70,13 @@ async function init() {
       },
       (talkTime * 1000)
     );
-    client.taskrouter.v1.workspaces(args.wrkspc)
-      .tasks(TaskSid)
-      .reservations(ReservationSid)
-      .update({
-        instruction: 'conference',
-        from: from,
-        to: to,
-        endConferenceOnExit: true
-      });
-    res.status(200).send({});
+    if (channelName === 'voice') {
+      startConference(context, channelAddress, TaskSid, ReservationSid);
+      res.status(200).send({});
+    }
+    else {
+      res.status(200).send({ instruction: 'accept' });
+    }
   })
 
   app.post('/agentJoined', (req, res) => {
@@ -152,17 +155,19 @@ async function changeActivityAndWait(context, WorkerSid, activityName) {
 }
 
 async function loadTwilioResources(context) {
+  const { args, client } = context;
   context.activities = await fetchActivities(context);
   context.workers = await fetchFlexsimWorkers(context);
+  context.syncMap = await getOrCreateSyncMap(client, args.syncSvcSid, 'calls');
 }
 
-const addDimValuesFromReservation = (context, TaskAge, taskAttributes, workerAttributes) => {
-  const taskData = { waitTime: TaskAge, ...taskAttributes };
-  const custName = taskData.name;
-  const workerData = { ...workerAttributes };
-  const workerName = workerData.full_name;
-  context.dimValues.tasks[custName] = taskData;
-  context.dimValues.workers[workerName] = workerData;
+const addTaskValuesFromSync = (context, name, ixnValues) => {
+  context.dimValues.tasks[name] = ixnValues;
+};
+
+const addDimValuesFromReservation = (context, name, TaskAge, workerAttributes) => {
+  context.dimValues.tasks[name].waitTime = TaskAge;
+  context.dimValues.workers[workerAttributes.full_name] = workerAttributes;
 };
 
 const initializeContext = (cfg, args) => {
@@ -175,19 +180,21 @@ function getArgs() {
     aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', p: 'port' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_PORT } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_PORT, SYNC_SVC_SID } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.port = args.port || AGENTSIM_PORT || 3000;
   args.cfgdir = args.cfgdir || 'config';
   args.timeLim = args.timeLim || 3600;
-  const { acct, wrkspc, cfgdir, port, timeLim } = args;
+  args.syncSvcSid = SYNC_SVC_SID;
+  const { acct, wrkspc, cfgdir, port, timeLim, syncSvcSid } = args;
   console.log('acct:', acct);
   console.log('wrkspc:', wrkspc);
   console.log('cfgdir:', cfgdir);
   console.log('port:', port);
   console.log('timeLim:', timeLim);
+  console.log('syncSvcSid:', syncSvcSid);
   return args;
 }
 

@@ -23,7 +23,7 @@ const fetchFlexsimTasks = async (ctx) => {
   return tasks;
 };
 
-const submitTask = async (ctx, customer, valuesDescriptor) => {
+const submitTask = async (ctx, ixnId, customer, valuesDescriptor) => {
   const { args, cfg, client, workflow, channels, dimInstances, dimValues } = ctx;
   const { acct, wrkspc } = args;
   const { phone: from, fullName, country, state, city, zip } = customer;
@@ -40,12 +40,10 @@ const submitTask = async (ctx, customer, valuesDescriptor) => {
         taskChannel: taskChannel.sid,
         attributes: JSON.stringify({
           flexsim: brand,
+          ixnId,
           name: fullName,
-          'api_version': '2010-04-01',
           'account_sid': acct,
           'direction': 'inbound',
-          'call_status': '',
-          'call_sid': '',
           'caller': from,
           'caller_country': country,
           'caller_state': state,
@@ -132,6 +130,21 @@ const setTaskStatus = (status, ctx, taskSid) => {
     })
 };
 
+function startConference(ctx, channelAddress, TaskSid, ReservationSid) {
+  // TODO get new domain value for this
+  const from = '+15072747105';
+  const { args, client } = ctx;
+  client.taskrouter.v1.workspaces(args.wrkspc)
+    .tasks(TaskSid)
+    .reservations(ReservationSid)
+    .update({
+      instruction: 'conference',
+      from: from,
+      to: channelAddress,
+      endConferenceOnExit: true
+    });
+}
+
 async function removeTasks(ctx) {
   const { args, client } = ctx;
   const { wrkspc } = args;
@@ -154,6 +167,7 @@ module.exports = {
   fetchFlexsimTasks,
   fetchTasks,
   removeTasks,
+  startConference,
   submitTask,
   wrapupTask
 }

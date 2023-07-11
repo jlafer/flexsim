@@ -24,11 +24,22 @@ function removeSyncMap(client, svcSid, syncMap) {
     .remove()
 }
 
-function createSyncMapItem(client, svcSid, syncMapSid, item) {
-  return client.sync.v1.services(svcSid)
-    .syncMaps(syncMapSid)
-    .syncMapItems
-    .create(item)
+async function createSyncMapItem(client, svcSid, syncMapSid, item) {
+  try {
+    const mapItem = await client.sync.v1.services(svcSid)
+      .syncMaps(syncMapSid)
+      .syncMapItems
+      .create(item);
+    return mapItem;
+  }
+  catch (err) {
+    console.log('createSyncMapItem: error:', err);
+    const { key, data, itemTtl } = item;
+    return client.sync.v1.services(svcSid)
+      .syncMaps(syncMapSid)
+      .syncMapItems(key)
+      .update({ data, itemTtl });
+  }
 }
 
 function getSyncMapItem(client, svcSid, syncMapSid, key) {

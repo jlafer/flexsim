@@ -57,9 +57,9 @@ async function init() {
     const talkTime = getDimValue(dimValues, valuesDescriptor.id, talkTimeDim);
     const wrapTimeDim = getSingleDimInstance('wrapTime', dimInstances);
     const wrapTime = getDimValue(dimValues, valuesDescriptor.id, wrapTimeDim);
-    const channelDim = getSingleDimInstance('channel', dimInstances);
-    const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDim);
-    const channelAddress = getDimValueParam('address', channelName, channelDim);
+    const channelDimInstance = getSingleDimInstance('channel', dimInstances);
+    const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDimInstance);
+    const channelAddress = getDimValueParam('address', channelName, channelDimInstance);
 
     setTimeout(
       function () {

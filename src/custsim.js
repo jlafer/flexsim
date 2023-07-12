@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
-const { readJsonFile } = require('flexsim-lib');
+const { getDimValueParam, getSingleDimInstance, readJsonFile } = require('flexsim-lib');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
 const { parseAndValidateArgs } = require('./helpers/args');
@@ -16,7 +16,6 @@ async function init() {
   const cfg = await readConfiguration(args);
   console.log('cfg:', cfg);
   const context = initializeContext(cfg, args);
-  const { dimValues, dimInstances } = context;
   await loadTwilioResources(context);
   console.log(`read workflow: ${context.workflow.friendlyName}`);
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
@@ -27,13 +26,20 @@ async function init() {
 
   app.post('/makeCustomerCall', async (req, res) => {
     console.log('custsim:makeCustomerCall: making a call');
-    const { client, args } = context;
+    const { client, args, cfg } = context;
     const { ixnId } = req.body;
     const sendDigits = `wwwww${ixnId}#`;
-    // TODO hard-coding
-    const from = '+15072747105';
-    const to = '+16292091380';
-    const callSid = await makeCall(client, from, to, sendDigits, `${args.custsimHost}/callConnected`, `${args.custsimHost}/callStatus`);
+    const { metadata } = cfg;
+    const { customers } = metadata;
+    const to = getAddress(context, 'voice');
+    const callSid = await makeCall({
+      client,
+      from: customers.customersPhone,
+      to,
+      sendDigits,
+      connectedUrl: `${args.custsimHost}/callConnected`,
+      statusUrl: `${args.custsimHost}/callStatus`
+    });
     mapCallToIxn(context, callSid, ixnId)
     res.send({ callSid });
   });
@@ -132,6 +138,13 @@ const ixnToCall = (ctx, ixnId) => {
 
 const callToIxn = (ctx, callSid) => {
   return ctx.ixnsByCall[callSid];
+};
+
+const getAddress = (ctx, channelName) => {
+  const { dimInstances } = ctx;
+  const channelDimInstance = getSingleDimInstance('channel', dimInstances);
+  const channelAddress = getDimValueParam('address', channelName, channelDimInstance);
+  return channelAddress;
 };
 
 function getArgs() {

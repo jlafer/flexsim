@@ -131,15 +131,15 @@ const setTaskStatus = (status, ctx, taskSid) => {
 };
 
 function startConference(ctx, channelAddress, TaskSid, ReservationSid) {
-  // TODO get new domain value for this
-  const from = '+15072747105';
-  const { args, client } = ctx;
+  const { args, cfg, client } = ctx;
+  const { metadata } = cfg;
+  const { customers } = metadata;
   client.taskrouter.v1.workspaces(args.wrkspc)
     .tasks(TaskSid)
     .reservations(ReservationSid)
     .update({
       instruction: 'conference',
-      from: from,
+      from: customers.customersPhone,
       to: channelAddress,
       endConferenceOnExit: true
     });

@@ -4,13 +4,15 @@
   "queueFilterDim": "topic",
   "customers": {
     "country": "US",
-    "phoneFormat": "+1#########"
+    "phoneFormat": "+1#########",
+    "customersPhone": "+15072747105"
   },
   "center": {
     "country": "US",
     "state": "IL",
     "city": "SPRINGFIELD",
-    "zip": "12345"
+    "zip": "12345",
+    "agentsPhone": "+18148134754"
   },
   "queueWorkerDims": [
     "routing.skills"
@@ -122,7 +124,7 @@
           "isAttribute": false,
           "valueParams": [
             {
-              "address": "+18148134754",
+              "address": "+16292091380",
               "portion": 0.5,
               "baseCapacity": 1
             },
@@ -132,7 +134,7 @@
               "baseCapacity": 2
             },
             {
-              "address": "+18148134754",
+              "address": "+16292091380",
               "portion": 0.2,
               "baseCapacity": 2
             }

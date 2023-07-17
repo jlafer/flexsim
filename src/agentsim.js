@@ -4,7 +4,7 @@ const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
   calcActivityChange, calcDimsValues, findObjInList, formatDt, formatSid,
-  getAttributeFromJson, getDimValue, getDimValueParam, getSingleDimInstance, readJsonFile
+  getDimValue, getDimValueParam, getSingleDimInstance, readJsonFile
 } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
@@ -32,11 +32,11 @@ async function init() {
   })
 
   app.post('/reservation', async (req, res) => {
+    const { args, cfg, client, dimValues, dimInstances, syncMap } = context;
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
     const taskAttributes = JSON.parse(TaskAttributes);
     const { ixnId } = taskAttributes;
     const workerAttributes = JSON.parse(WorkerAttributes);
-    const { args, client, syncMap } = context;
     const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
     const { data } = ixnDataItem;
     const newData = { ...data, taskSid: TaskSid, taskStatus: 'reserved' };
@@ -45,12 +45,10 @@ async function init() {
     const { fullName: custName } = customer;
     addTaskValuesFromSync(context, custName, ixnValues);
     addDimValuesFromReservation(context, custName, TaskAge, workerAttributes);
-    const { dimValues, dimInstances } = context;
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
     const now = Date.now();
-    console.log(formatDt(now));
-    console.log(`  ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
+    console.log(`${formatDt(now)}: ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
     calcDimsValues(context, valuesDescriptor);
     const talkTimeDim = getSingleDimInstance('talkTime', dimInstances);
@@ -59,19 +57,17 @@ async function init() {
     const wrapTime = getDimValue(dimValues, valuesDescriptor.id, wrapTimeDim);
     const channelDimInstance = getSingleDimInstance('channel', dimInstances);
     const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDimInstance);
-    const channelAddress = getDimValueParam('address', channelName, channelDimInstance);
 
     setTimeout(
       function () {
         const now = Date.now();
-        console.log(formatDt(now));
-        console.log(`  ${friendlyName} wrapping task ${formatSid(TaskSid)}`);
+        console.log(`${formatDt(now)}: ${friendlyName} wrapping task ${formatSid(TaskSid)}`);
         doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime);
       },
       (talkTime * 1000)
     );
     if (channelName === 'voice') {
-      startConference(context, channelAddress, TaskSid, ReservationSid);
+      startConference(context, TaskSid, ReservationSid);
       res.status(200).send({});
     }
     else {
@@ -79,8 +75,12 @@ async function init() {
     }
   })
 
+  // the /agentJoined endpoint is called by the webhook configured on the phone
+  // defined in domain.center.agentsPhone
+
   app.post('/agentJoined', (req, res) => {
-    console.log('agent:agentJoined: the agent has joined the conference');
+    const now = Date.now();
+    console.log(`${formatDt(now)}: the agent has joined the conference`);
     const twiml = new VoiceResponse();
     twiml.say('Hi.');
     twiml.pause({
@@ -111,10 +111,9 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
   setTimeout(
     function () {
       const now = Date.now();
-      console.log(formatDt(now));
       const valuesDescriptor = { entity: 'tasks', phase: 'complete', id: custName };
       calcDimsValues(context, valuesDescriptor);
-      console.log(`  ${friendlyName} completing task ${formatSid(TaskSid)}`);
+      console.log(`${formatDt(now)}: ${friendlyName} completing task ${formatSid(TaskSid)}`);
       completeTask(context, TaskSid, valuesDescriptor);
       R.dissoc(TaskSid, context.tasks);
     },
@@ -141,8 +140,7 @@ async function changeActivityAndWait(context, WorkerSid, activityName) {
   const activity = findObjInList('friendlyName', activityName, activities);
 
   if (activityName !== currActivityName) {
-    console.log(formatDt(now));
-    console.log(`  ${friendlyName} changing from ${currActivityName} to ${activityName}`);
+    console.log(`${formatDt(now)}: ${friendlyName} changing from ${currActivityName} to ${activityName}`);
     try {
       await changeActivity(context, sid, activity.sid);
     }

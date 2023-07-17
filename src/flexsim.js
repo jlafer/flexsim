@@ -36,17 +36,17 @@ async function run() {
     const syncMapItem = await createSyncMapItem(client, args.syncSvcSid, syncMap.sid, item);
     if (channelName === 'voice') {
       const callSid = await submitInteraction(context, ixnId, customer, valuesDescriptor);
-      console.log(`flexsim: made call ${formatSid(callSid)} at`, formatDt(now));
+      console.log(`${formatDt(now)}: made call ${formatSid(callSid)}`);
     }
     else {
       const task = await submitTask(context, ixnId, customer, valuesDescriptor);
-      console.log(`flexsim: made task ${formatSid(task.sid)} at`, formatDt(now));
+      console.log(`${formatDt(now)}: made task ${formatSid(task.sid)}`);
     }
     const arrivalGap = getDimValue(dimValues, valuesDescriptor.id, arrivalDimAndInst);
     await delay(arrivalGap * 1000);
     now = Date.now();
   }
-  console.log('flexsim finished at', formatDt(now));
+  console.log(`${formatDt(now)}: flexsim finished`);
 }
 
 run();

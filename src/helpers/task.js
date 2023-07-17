@@ -1,6 +1,6 @@
 const R = require('ramda');
 const {
-  findObjInList, formatSid, getAttributes, getDimValue, getDimValueParam, getSingleDimInstance, hasAttributeValue
+  findObjInList, formatDt, formatSid, getAttributes, getDimValue, getDimValueParam, getSingleDimInstance, hasAttributeValue
 } = require('flexsim-lib');
 
 const fetchTask = async (ctx, sid) => {
@@ -100,9 +100,10 @@ const completeTask = async (ctx, taskSid, valuesDescriptor) => {
   const completionAttributes = getAttributes(ctx, valuesDescriptor);
   const finalAttributes = R.mergeDeepRight(task.attributes, completionAttributes);
   task = await setTaskStatus('completed', ctx, taskSid);
-  console.log(`task completion for ${task.sid}`);
+  const now = Date.now();
+  console.log(`${formatDt(now)}: task completed: ${formatSid(task.sid)}`);
   task = await updateTaskAttributes(ctx, taskSid, finalAttributes);
-  console.log(`${task.sid} now has attributes:`, task.attributes);
+  //console.log(`${task.sid} now has attributes:`, task.attributes);
 };
 
 const updateTaskAttributes = (ctx, taskSid, attributes) => {
@@ -130,17 +131,17 @@ const setTaskStatus = (status, ctx, taskSid) => {
     })
 };
 
-function startConference(ctx, channelAddress, TaskSid, ReservationSid) {
+function startConference(ctx, TaskSid, ReservationSid) {
   const { args, cfg, client } = ctx;
   const { metadata } = cfg;
-  const { customers } = metadata;
+  const { customers, center } = metadata;
   client.taskrouter.v1.workspaces(args.wrkspc)
     .tasks(TaskSid)
     .reservations(ReservationSid)
     .update({
       instruction: 'conference',
       from: customers.customersPhone,
-      to: channelAddress,
+      to: center.agentsPhone,
       endConferenceOnExit: true
     });
 }

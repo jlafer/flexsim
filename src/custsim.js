@@ -1,7 +1,9 @@
 require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
-const { getDimValueParam, getSingleDimInstance, readJsonFile } = require('flexsim-lib');
+const {
+  formatDt, getDimValueParam, getSingleDimInstance, readJsonFile
+} = require('flexsim-lib');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
 const { parseAndValidateArgs } = require('./helpers/args');
@@ -25,7 +27,8 @@ async function init() {
   app.use(express.urlencoded({ extended: true }));
 
   app.post('/makeCustomerCall', async (req, res) => {
-    console.log('custsim:makeCustomerCall: making a call');
+    const now = Date.now();
+    console.log(`${formatDt(now)}: making a call`);
     const { client, args, cfg } = context;
     const { ixnId } = req.body;
     const sendDigits = `wwwww${ixnId}#`;
@@ -45,8 +48,9 @@ async function init() {
   });
 
   app.post('/callConnected', async (req, res) => {
+    const now = Date.now();
     const { client, args } = context;
-    console.log('custsim:callConnected: customer call connected to the IVR');
+    console.log(`${formatDt(now)}: customer call connected to the IVR`);
     const twiml = new VoiceResponse();
     // get initial greeting from the IVR
     twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 1 });
@@ -55,12 +59,13 @@ async function init() {
   });
 
   app.post('/speechGathered', async (req, res) => {
+    const now = Date.now();
     const { client, args } = context;
     const { SpeechResult } = req.body;
-    console.log('custsim:speechGathered: called on timeout');
+    //console.log(`${formatDt(now)}: called on timeout`);
     const twiml = new VoiceResponse();
     if (SpeechResult.length > 0) {
-      console.log(`custsim:speechGathered: customer gathered speech: ${SpeechResult}`);
+      console.log(`${formatDt(now)}: customer gathered speech: ${SpeechResult}`);
       twiml.say('I am the customer and I received speech from the IVR.');
     }
     twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 1 });
@@ -69,19 +74,24 @@ async function init() {
   });
 
   app.post('/callRouting', async (req, res) => {
+    const now = Date.now();
     const { args, client, syncMap } = context;
-    console.log('custsim:callRouting: called:', req.body);
+    console.log(`${formatDt(now)}: called:`, req.body);
     const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, req.body.ixnId);
     const { data } = ixnDataItem;
     const { ixnValues } = data;
-    console.log('custsim:callRouting: ixnValues:', ixnValues);
+    console.log(`${formatDt(now)}: call routing ixnValues:`, ixnValues);
     const callSid = ixnToCall(context, req.body.ixnId);
     if (!!callSid) {
       setTimeout(
         async function () {
+          const now = Date.now();
+          //console.log('custsim:callRouting: abandon timeout');
           const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, req.body.ixnId);
-          if (ixnDataItem.data.taskStatus === 'initiated')
+          if (ixnDataItem.data.taskStatus === 'initiated') {
+            console.log(`${formatDt(now)}: abandoning call`);
             hangupCall(client, callSid);
+          }
         },
         ixnValues.abandonTime * 1000
       );
@@ -93,7 +103,9 @@ async function init() {
   });
 
   app.post('/callStatus', async (req, res) => {
-    console.log('custsim:callStatus: called:', req.body);
+    const now = Date.now();
+    const summary = R.pick(['CallSid', 'CallStatus', 'CallDuration'], req.body);
+    console.log(`${formatDt(now)}: callStatus called:`, summary);
     const { CallSid } = req.body;
     unmapCallToIxn(context, CallSid);
     res.status(200).send({});

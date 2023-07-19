@@ -131,19 +131,23 @@ const setTaskStatus = (status, ctx, taskSid) => {
     })
 };
 
-function startConference(ctx, TaskSid, ReservationSid) {
+async function startConference(ctx, TaskSid, ReservationSid) {
   const { args, cfg, client } = ctx;
   const { metadata } = cfg;
   const { customers, center } = metadata;
-  client.taskrouter.v1.workspaces(args.wrkspc)
+  const response = await client.taskrouter.v1.workspaces(args.wrkspc)
     .tasks(TaskSid)
     .reservations(ReservationSid)
     .update({
       instruction: 'conference',
       from: customers.customersPhone,
       to: center.agentsPhone,
-      endConferenceOnExit: true
+      endConferenceOnExit: true,
+      conferenceStatusCallback: `${args.agentsimHost}/conferenceStatus`,
+      conferenceStatusCallbackEvent: ['join']
     });
+  //console.log('startConference:', response);
+  return response;
 }
 
 async function removeTasks(ctx) {
@@ -166,6 +170,7 @@ module.exports = {
   cancelTask,
   completeTask,
   fetchFlexsimTasks,
+  fetchTask,
   fetchTasks,
   removeTasks,
   startConference,

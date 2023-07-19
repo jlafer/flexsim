@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
 const {
-  formatDt, getDimValueParam, getSingleDimInstance, readJsonFile
+  formatDt, getDimValueParam, getSingleDimInstance, readJsonFile, formatSid
 } = require('flexsim-lib');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
@@ -43,7 +43,7 @@ async function init() {
       connectedUrl: `${args.custsimHost}/callConnected`,
       statusUrl: `${args.custsimHost}/callStatus`
     });
-    mapCallToIxn(context, callSid, ixnId)
+    mapCallToIxn(context, callSid, ixnId, 'ivr');
     res.send({ callSid });
   });
 
@@ -60,34 +60,40 @@ async function init() {
 
   app.post('/speechGathered', async (req, res) => {
     const now = Date.now();
-    const { client, args } = context;
-    const { SpeechResult } = req.body;
+    const { args } = context;
+    const { CallSid, SpeechResult } = req.body;
     //console.log(`${formatDt(now)}: called on timeout`);
     const twiml = new VoiceResponse();
     if (SpeechResult.length > 0) {
-      console.log(`${formatDt(now)}: customer gathered speech: ${SpeechResult}`);
-      twiml.say('I am the customer and I received speech from the IVR.');
+      const ixnId = callToIxn(context, CallSid);
+      const { otherParty } = ixnToCall(context, ixnId);
+      console.log(`${formatDt(now)}: customer got speech for call ${formatSid(CallSid)} from ${otherParty}: ${SpeechResult}`);
+      twiml.say(`I am the customer and I received speech from the ${otherParty}.`);
     }
     twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 1 });
     res.type('text/xml');
     res.send(twiml.toString());
   });
 
+  // the /callRouting endpoint is called from the Studio flow after task creation (SendToFlex)
+
   app.post('/callRouting', async (req, res) => {
-    const now = Date.now();
     const { args, client, syncMap } = context;
-    console.log(`${formatDt(now)}: called:`, req.body);
-    const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, req.body.ixnId);
+    const { ixnId } = req.body;
+    const now = Date.now();
+    console.log(`${formatDt(now)}: called:`, ixnId);
+
+    const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
     const { data } = ixnDataItem;
     const { ixnValues } = data;
-    console.log(`${formatDt(now)}: call routing ixnValues:`, ixnValues);
-    const callSid = ixnToCall(context, req.body.ixnId);
+    console.log(`  call routing ixnValues:`, ixnValues);
+    const { callSid, otherParty } = ixnToCall(context, ixnId);
     if (!!callSid) {
       setTimeout(
         async function () {
           const now = Date.now();
           //console.log('custsim:callRouting: abandon timeout');
-          const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, req.body.ixnId);
+          const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
           if (ixnDataItem.data.taskStatus === 'initiated') {
             console.log(`${formatDt(now)}: abandoning call`);
             hangupCall(client, callSid);
@@ -101,6 +107,20 @@ async function init() {
     }
     res.status(200).send({});
   });
+
+  // the /agentJoined endpoint is called from the agentsim.conferenceStatus endpoint
+
+  app.post('/agentJoined', async (req, res) => {
+    const { args, client, syncMap } = context;
+    const { ixnId, taskSid, customerCallSid } = req.body;
+    const { callSid } = ixnToCall(context, ixnId);
+    mapCallToIxn(context, callSid, ixnId, 'agent')
+    const now = Date.now();
+    console.log(`${formatDt(now)}: received notify of agent joining call:`, req.body);
+    res.status(200).send({});
+  });
+
+  // the /callStatus endpoint is called from the Call's "status" webhook on hangup
 
   app.post('/callStatus', async (req, res) => {
     const now = Date.now();
@@ -133,8 +153,9 @@ const initializeContext = (cfg, args) => {
   return context;
 }
 
-const mapCallToIxn = (ctx, callSid, ixnId) => {
-  ctx.callsByIxn[ixnId] = callSid;
+// link the SID of the outbound call from the customer phone with the ixnId
+const mapCallToIxn = (ctx, callSid, ixnId, otherParty) => {
+  ctx.callsByIxn[ixnId] = { callSid, otherParty };
   ctx.ixnsByCall[callSid] = ixnId;
 }
 

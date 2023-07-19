@@ -7,6 +7,7 @@ function createSyncMap(client, svcSid, name) {
 }
 
 function getOrCreateSyncMap(client, svcSid, name) {
+  console.log('getting sync map:', svcSid);
   return getSyncMapByName(client, svcSid, name)
     .then(map => {
       return (!!map) ? map : createSyncMap(client, svcSid, name);
@@ -33,12 +34,16 @@ async function createSyncMapItem(client, svcSid, syncMapSid, item) {
     return mapItem;
   }
   catch (err) {
-    console.log('createSyncMapItem: error:', err);
-    const { key, data, itemTtl } = item;
-    return client.sync.v1.services(svcSid)
-      .syncMaps(syncMapSid)
-      .syncMapItems(key)
-      .update({ data, itemTtl });
+    const { code } = err;
+    if (code === 54208) {
+      const { key, data, itemTtl } = item;
+      return client.sync.v1.services(svcSid)
+        .syncMaps(syncMapSid)
+        .syncMapItems(key)
+        .update({ data, itemTtl });  
+    }
+    console.error('createSyncMapItem: error:', err);
+    throw new Error(err);
   }
 }
 

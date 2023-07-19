@@ -1,4 +1,5 @@
 require("dotenv").config();
+const axios = require('axios');
 const express = require('express');
 const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
@@ -11,7 +12,7 @@ const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem, updateSyncMapItem } = require('./helpers/sync');
-const { completeTask, startConference, wrapupTask } = require('./helpers/task');
+const { completeTask, fetchTask, startConference, wrapupTask } = require('./helpers/task');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -34,21 +35,28 @@ async function init() {
   app.post('/reservation', async (req, res) => {
     const { args, cfg, client, dimValues, dimInstances, syncMap } = context;
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
+
     const taskAttributes = JSON.parse(TaskAttributes);
     const { ixnId } = taskAttributes;
     const workerAttributes = JSON.parse(WorkerAttributes);
+
+    mapTaskToIxn(context, TaskSid, ixnId);
+
     const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
     const { data } = ixnDataItem;
     const newData = { ...data, taskSid: TaskSid, taskStatus: 'reserved' };
     updateSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId, { data: newData });
+
     const { ixnValues, customer } = newData;
     const { fullName: custName } = customer;
     addTaskValuesFromSync(context, custName, ixnValues);
     addDimValuesFromReservation(context, custName, TaskAge, workerAttributes);
+
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
     const now = Date.now();
     console.log(`${formatDt(now)}: ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
+
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
     calcDimsValues(context, valuesDescriptor);
     const talkTimeDim = getSingleDimInstance('talkTime', dimInstances);
@@ -67,7 +75,10 @@ async function init() {
       (talkTime * 1000)
     );
     if (channelName === 'voice') {
-      startConference(context, TaskSid, ReservationSid);
+      const reservation = await startConference(context, TaskSid, ReservationSid);
+      //console.log('reservation:', reservation);
+      //const task = await fetchTask(context, TaskSid);
+      //console.log('task after starting conference:', task);
       res.status(200).send({});
     }
     else {
@@ -75,12 +86,32 @@ async function init() {
     }
   })
 
+  app.post('/conferenceStatus', async (req, res) => {
+    const now = Date.now();
+    const { TaskSid, CustomerCallSid, CallSid } = req.body;
+    const ixnId = taskToIxn(context, TaskSid);
+
+    if (CallSid !== CustomerCallSid) {
+      console.log(`${formatDt(now)}: agent answered call ${formatSid(CallSid)} for task ${formatSid(TaskSid)}`);
+      const data = await notifyCustsim(
+        context,
+        { ixnId, taskSid: TaskSid, customerCallSid: CustomerCallSid, callSid: CallSid }
+      );
+
+      // NOTE: removing ixnId from cache as no longer needed;
+      // move to a task-completed handler if this changes
+      unmapTaskToIxn(context, TaskSid);
+    }
+    res.status(200).send({});
+  });
+
   // the /agentJoined endpoint is called by the webhook configured on the phone
   // defined in domain.center.agentsPhone
 
-  app.post('/agentJoined', (req, res) => {
+  app.post('/agentJoined', async (req, res) => {
     const now = Date.now();
-    console.log(`${formatDt(now)}: the agent has joined the conference`);
+    //console.log(`${formatDt(now)}: the agent has joined the conference`, req.body);
+
     const twiml = new VoiceResponse();
     twiml.say('Hi.');
     twiml.pause({
@@ -105,6 +136,19 @@ async function init() {
 }
 
 init();
+
+const notifyCustsim = async (ctx, taskAndCall) => {
+  const { args } = ctx;
+  const { custsimHost } = args;
+  const config = {
+    method: 'post',
+    url: `${custsimHost}/agentJoined`,
+    data: taskAndCall
+  };
+  const response = await axios.request(config);
+  const { data } = response;
+  return data;
+};
 
 const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
   wrapupTask(context, TaskSid);
@@ -170,28 +214,46 @@ const addDimValuesFromReservation = (context, name, TaskAge, workerAttributes) =
 
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
+  context.ixnsBytaskSid = {};
   return context;
 }
+
+// link the taskSid with the ixnId
+const mapTaskToIxn = (ctx, taskSid, ixnId) => {
+  ctx.ixnsBytaskSid[taskSid] = ixnId;
+}
+
+const unmapTaskToIxn = (ctx, taskSid) => {
+  R.dissoc(taskSid, ctx.ixnsBytaskSid);
+}
+
+const taskToIxn = (ctx, taskSid) => {
+  return ctx.ixnsBytaskSid[taskSid];
+};
 
 function getArgs() {
   const args = parseAndValidateArgs({
     aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', p: 'port' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_PORT, SYNC_SVC_SID } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_HOST, AGENTSIM_PORT, CUSTSIM_HOST, SYNC_SVC_SID } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.port = args.port || AGENTSIM_PORT || 3000;
   args.cfgdir = args.cfgdir || 'config';
   args.timeLim = args.timeLim || 3600;
+  args.agentsimHost = AGENTSIM_HOST;
+  args.custsimHost = CUSTSIM_HOST;
   args.syncSvcSid = SYNC_SVC_SID;
-  const { acct, wrkspc, cfgdir, port, timeLim, syncSvcSid } = args;
+  const { acct, wrkspc, cfgdir, port, timeLim, agentsimHost, custsimHost, syncSvcSid } = args;
   console.log('acct:', acct);
   console.log('wrkspc:', wrkspc);
   console.log('cfgdir:', cfgdir);
   console.log('port:', port);
   console.log('timeLim:', timeLim);
+  console.log('agentsimHost:', agentsimHost);
+  console.log('custsimHost:', custsimHost);
   console.log('syncSvcSid:', syncSvcSid);
   return args;
 }

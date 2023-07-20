@@ -26,6 +26,8 @@ async function init() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // the makeCustomerCall endpoint is called from flexsim
+
   app.post('/makeCustomerCall', async (req, res) => {
     const now = Date.now();
     console.log(`${formatDt(now)}: making a call`);
@@ -43,9 +45,12 @@ async function init() {
       connectedUrl: `${args.custsimHost}/callConnected`,
       statusUrl: `${args.custsimHost}/callStatus`
     });
-    mapCallToIxn(context, callSid, ixnId, 'ivr');
+    mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr', speechIdx: 0 });
     res.send({ callSid });
   });
+
+  // the callConnected endpoint is called by the Twilio webhook when the call
+  // is answered by the center number app (see "connectedUrl" above)
 
   app.post('/callConnected', async (req, res) => {
     const now = Date.now();
@@ -58,6 +63,9 @@ async function init() {
     res.send(twiml.toString());
   });
 
+  // the speechGathered endpoint is called by the Twilio webhook
+  // when speech is gathered from the center app by this app
+
   app.post('/speechGathered', async (req, res) => {
     const now = Date.now();
     const { args } = context;
@@ -65,8 +73,7 @@ async function init() {
     //console.log(`${formatDt(now)}: called on timeout`);
     const twiml = new VoiceResponse();
     if (SpeechResult.length > 0) {
-      const ixnId = callToIxn(context, CallSid);
-      const { otherParty } = ixnToCall(context, ixnId);
+      const { otherParty, speechIdx } = callToIxn(context, CallSid);
       console.log(`${formatDt(now)}: customer got speech for call ${formatSid(CallSid)} from ${otherParty}: ${SpeechResult}`);
       twiml.say(`I am the customer and I received speech from the ${otherParty}.`);
     }
@@ -75,7 +82,7 @@ async function init() {
     res.send(twiml.toString());
   });
 
-  // the /callRouting endpoint is called from the Studio flow after task creation (SendToFlex)
+  // the callRouting endpoint is called by the Studio flow after task creation (SendToFlex)
 
   app.post('/callRouting', async (req, res) => {
     const { args, client, syncMap } = context;
@@ -114,7 +121,7 @@ async function init() {
     const { args, client, syncMap } = context;
     const { ixnId, taskSid, customerCallSid } = req.body;
     const { callSid } = ixnToCall(context, ixnId);
-    mapCallToIxn(context, callSid, ixnId, 'agent')
+    mapCallToIxn(context, callSid, ixnId, { otherParty: 'agent', speechIdx: 0 })
     const now = Date.now();
     console.log(`${formatDt(now)}: received notify of agent joining call:`, req.body);
     res.status(200).send({});
@@ -148,29 +155,29 @@ async function loadTwilioResources(context) {
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
   context.simStopTS = context.simStartTS + (args.timeLim * 1000);
-  context.callsByIxn = {};
-  context.ixnsByCall = {};
+  context.ixndataByIxnId = {};
+  context.ixndataByCallSid = {};
   return context;
 }
 
-// link the SID of the outbound call from the customer phone with the ixnId
-const mapCallToIxn = (ctx, callSid, ixnId, otherParty) => {
-  ctx.callsByIxn[ixnId] = { callSid, otherParty };
-  ctx.ixnsByCall[callSid] = ixnId;
+// link the SID of the outbound call from the customer phone with the ixnData
+const mapCallToIxn = (ctx, callSid, ixnId, ixnData) => {
+  ctx.ixndataByIxnId[ixnId] = { ...ixnData, callSid };
+  ctx.ixndataByCallSid[callSid] = { ...ixnData, ixnId };
 }
 
 const unmapCallToIxn = (ctx, callSid) => {
-  const ixnId = callToIxn(ctx, callSid);
-  R.dissoc(ixnId, ctx.callsByIxn);
-  R.dissoc(callSid, ctx.ixnsByCall);
+  const ixnData = callToIxn(ctx, callSid);
+  R.dissoc(ixnData.ixnId, ctx.ixndataByIxnId);
+  R.dissoc(callSid, ctx.ixndataByCallSid);
 }
 
 const ixnToCall = (ctx, ixnId) => {
-  return ctx.callsByIxn[ixnId];
+  return ctx.ixndataByIxnId[ixnId];
 };
 
 const callToIxn = (ctx, callSid) => {
-  return ctx.ixnsByCall[callSid];
+  return ctx.ixndataByCallSid[callSid];
 };
 
 const getAddress = (ctx, channelName) => {

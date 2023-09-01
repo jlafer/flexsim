@@ -13,6 +13,21 @@ const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
 const { makeCall } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
 
+const speech = {
+  "ivr": [
+    "I have a problem with the device.",
+    "Very short battery life.",
+    "No."
+  ],
+  "agent": [
+    "Hello. I am having a problem with your product.",
+    "Well. The battery life seems incredibly short. The thing is almost unusable.",
+    "It only lasts about two hours and then I have to look for a charging station.",
+    "I don't want to upgrade but if that's the only solution then sign me up!",
+    "Thank you for your help. Good bye."
+  ]
+};
+
 async function init() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
@@ -70,12 +85,11 @@ async function init() {
     const now = Date.now();
     const { args } = context;
     const { CallSid, SpeechResult } = req.body;
-    //console.log(`${formatDt(now)}: called on timeout`);
     const twiml = new VoiceResponse();
     if (SpeechResult.length > 0) {
       const { otherParty, speechIdx } = callToIxn(context, CallSid);
       console.log(`${formatDt(now)}: customer got speech for call ${formatSid(CallSid)} from ${otherParty}: ${SpeechResult}`);
-      twiml.say(`I am the customer and I received speech from the ${otherParty}.`);
+      twiml.say(speech[otherParty][speechIdx]);
     }
     twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 1 });
     res.type('text/xml');
@@ -99,10 +113,9 @@ async function init() {
       setTimeout(
         async function () {
           const now = Date.now();
-          //console.log('custsim:callRouting: abandon timeout');
           const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
           if (ixnDataItem.data.taskStatus === 'initiated') {
-            console.log(`${formatDt(now)}: abandoning call`);
+            console.log(`${formatDt(now)}: abandoning call ${callSid}`);
             hangupCall(client, callSid);
           }
         },

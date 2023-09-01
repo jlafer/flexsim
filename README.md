@@ -102,6 +102,8 @@ The optional command-line options include:
 
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 
+NOTE:
+- The deployment script will delete and re-create TaskRouter objects (i.e., Workers, TaskQueues, Workflows). As a result, if you have a Studio Flow (or any other app) that references a Workflow -- which it does by SID -- you will need to edit the Workflow field in any SendToFlex widgets, save and re-publish.
 
 ### agentsim
 `agentsim` is an Express server that handles tasks in a specific Twilio project and TR workspace.

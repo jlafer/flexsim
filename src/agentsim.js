@@ -32,6 +32,10 @@ async function init() {
     res.send('Hello World!')
   })
 
+  // the /reservation endpoint is called by the assignmentCallbackURL configured on the Workflow
+  // for voice calls, it responds with an instruction to add the agent phone to the conference
+  // for other channels, it accepts the reservation
+
   app.post('/reservation', async (req, res) => {
     const { args, cfg, client, dimValues, dimInstances, syncMap } = context;
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;

@@ -60,6 +60,7 @@ async function init() {
       connectedUrl: `${args.custsimHost}/callConnected`,
       statusUrl: `${args.custsimHost}/callStatus`
     });
+    console.log(`customer placed call ${formatSid(callSid)}`);
     mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr', speechIdx: 0 });
     res.send({ callSid });
   });
@@ -173,7 +174,7 @@ const initializeContext = (cfg, args) => {
   return context;
 }
 
-// link the SID of the outbound call from the customer phone with the ixnData
+// link the outbound customer call SID and the ixnId with the ixnData
 const mapCallToIxn = (ctx, callSid, ixnId, ixnData) => {
   ctx.ixndataByIxnId[ixnId] = { ...ixnData, callSid };
   ctx.ixndataByCallSid[callSid] = { ...ixnData, ixnId };

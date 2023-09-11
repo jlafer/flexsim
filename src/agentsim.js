@@ -90,31 +90,12 @@ async function init() {
     }
   })
 
-  app.post('/conferenceStatus', async (req, res) => {
+  // the /agentAnswered endpoint is called by the webhook configured on the agent phone
+  // the phone number is defined in domain.center.agentsPhone
+
+  app.post('/agentAnswered', async (req, res) => {
     const now = Date.now();
-    const { TaskSid, CustomerCallSid, CallSid } = req.body;
-    const ixnId = taskToIxn(context, TaskSid);
-
-    if (CallSid !== CustomerCallSid) {
-      console.log(`${formatDt(now)}: agent answered call ${formatSid(CallSid)} for task ${formatSid(TaskSid)}`);
-      const data = await notifyCustsim(
-        context,
-        { ixnId, taskSid: TaskSid, customerCallSid: CustomerCallSid, callSid: CallSid }
-      );
-
-      // NOTE: removing ixnId from cache as no longer needed;
-      // move to a task-completed handler if this changes
-      unmapTaskToIxn(context, TaskSid);
-    }
-    res.status(200).send({});
-  });
-
-  // the /agentJoined endpoint is called by the webhook configured on the phone
-  // defined in domain.center.agentsPhone
-
-  app.post('/agentJoined', async (req, res) => {
-    const now = Date.now();
-    //console.log(`${formatDt(now)}: the agent has joined the conference`, req.body);
+    console.log(`${formatDt(now)}: the agent has answered the call:`, req.body);
 
     const twiml = new VoiceResponse();
     twiml.say('Hi.');
@@ -132,6 +113,31 @@ async function init() {
     twiml.say('It was my pleasure to help.');
     res.type('text/xml');
     res.send(twiml.toString());
+  });
+
+  // the /conferenceStatus endpoint is called by the conferenceStatusCallback,
+  // set when the "conference" instruction is issued in startConference (above)
+
+  app.post('/conferenceStatus', async (req, res) => {
+    const now = Date.now();
+    const { TaskSid, CustomerCallSid, CallSid } = req.body;
+    const ixnId = taskToIxn(context, TaskSid);
+
+    // skip the duplicate notification that happens because both customer and agent parties
+    // are in the same Twilio project
+    if (CallSid !== CustomerCallSid) {
+      console.log(`${formatDt(now)}: agent joined the conference: call ${formatSid(CallSid)} for task ${formatSid(TaskSid)}`);
+      console.log(`  for customer??? call ${formatSid(CustomerCallSid)}`);
+      const data = await notifyCustsim(
+        context,
+        { ixnId, taskSid: TaskSid, customerCallSid: CustomerCallSid, callSid: CallSid }
+      );
+
+      // NOTE: removing ixnId from cache as it's no longer needed;
+      // move to a task-completed handler if this changes
+      unmapTaskToIxn(context, TaskSid);
+    }
+    res.status(200).send({});
   });
 
   app.listen(args.port, () => {

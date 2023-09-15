@@ -94,31 +94,47 @@ async function init() {
   // the phone number is defined in domain.center.agentsPhone
 
   app.post('/agentAnswered', async (req, res) => {
+    const { callsState } = context;
     const now = Date.now();
-    console.log(`${formatDt(now)}: the agent has answered the call:`, req.body);
+    const { CallSid } = req.body;
+    console.log(`${formatDt(now)}: the agent has received the call: ${CallSid}`);
+    callsState[CallSid] = { sayCnt: 0 };
 
     const twiml = new VoiceResponse();
-    twiml.say('Hi.');
-    twiml.pause({
-      length: 5
+    twiml.gather({
+      input: 'speech',
+      partialResultCallback: `${args.agentsimHost}/agentSpeechGathered`,
+      actionOnEmptyResult: true
     });
-    twiml.say('I am the agent. How can I help?');
-    twiml.pause({
-      length: 5
-    });
-    twiml.say('I just paused for another five seconds.');
-    twiml.pause({
-      length: 30
-    });
-    twiml.say('It was my pleasure to help.');
     res.type('text/xml');
     res.send(twiml.toString());
+  });
+
+  app.post('/agentSpeechGathered', async (req, res) => {
+    const { callsState, client } = context;
+    const { CallSid, SpeechResult } = req.body;
+    console.log(`${formatDt(now)}: speech gathered for call ${formatSid(CallSid)}:`, SpeechResult);
+    const callState = callsState[CallSid];
+    let speech;
+    if (!!callState || callState.sayCnt > 5) {
+      client.calls(CallSid)
+        .update({ status: 'completed' });
+      R.dissoc(CallSid, callsState);
+    }
+    else {
+      callState.sayCnt = callState.sayCnt + 1;
+      speech = `This is agent speech number ${callState.sayCnt}`;
+      client.calls(CallSid)
+        .update({ twiml: `<Response><Say>${speech}</Say></Response>` });
+    }
+    res.status(200).send({});
   });
 
   // the /conferenceStatus endpoint is called by the conferenceStatusCallback,
   // set when the "conference" instruction is issued in startConference (above)
 
   app.post('/conferenceStatus', async (req, res) => {
+    const { callsState } = context;
     const now = Date.now();
     const { TaskSid, CustomerCallSid, CallSid } = req.body;
     const ixnId = taskToIxn(context, TaskSid);
@@ -224,21 +240,22 @@ const addDimValuesFromReservation = (context, name, TaskAge, workerAttributes) =
 
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
-  context.ixnsBytaskSid = {};
+  context.ixnsByTaskSid = {};
+  context.callsState = {};
   return context;
 }
 
 // link the taskSid with the ixnId
 const mapTaskToIxn = (ctx, taskSid, ixnId) => {
-  ctx.ixnsBytaskSid[taskSid] = ixnId;
+  ctx.ixnsByTaskSid[taskSid] = ixnId;
 }
 
 const unmapTaskToIxn = (ctx, taskSid) => {
-  R.dissoc(taskSid, ctx.ixnsBytaskSid);
+  R.dissoc(taskSid, ctx.ixnsByTaskSid);
 }
 
 const taskToIxn = (ctx, taskSid) => {
-  return ctx.ixnsBytaskSid[taskSid];
+  return ctx.ixnsByTaskSid[taskSid];
 };
 
 function getArgs() {
@@ -274,3 +291,25 @@ async function readConfiguration(args) {
   const workers = await readJsonFile(`${cfgdir}/workers.json`);
   return { metadata, workers };
 }
+
+//app.post('/agentAnswered', async (req, res) => {
+//  const now = Date.now();
+//  console.log(`${formatDt(now)}: the agent has answered the call:`, req.body);
+//
+//  const twiml = new VoiceResponse();
+//  twiml.say('Hi.');
+//  twiml.pause({
+//    length: 5
+//  });
+//  twiml.say('I am the agent. How can I help?');
+//  twiml.pause({
+//    length: 5
+//  });
+//  twiml.say('I just paused for another five seconds.');
+//  twiml.pause({
+//    length: 30
+//  });
+//  twiml.say('It was my pleasure to help.');
+//  res.type('text/xml');
+//  res.send(twiml.toString());
+//});

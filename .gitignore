@@ -1,7 +1,9 @@
 node_modules
 TODO.txt
 .env
+.env.flexstats
 config/
+zscaler/
 testWorker.json
 samples.json
 ngrok.yaml

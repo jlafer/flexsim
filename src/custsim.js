@@ -10,7 +10,7 @@ const { parseAndValidateArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
-const { makeCall } = require('./helpers/voice');
+const { makeCall, hangupCall } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
 
 const speech = {
@@ -74,7 +74,7 @@ async function init() {
     console.log(`${formatDt(now)}: customer call connected to the IVR`);
     const twiml = new VoiceResponse();
     // get initial greeting from the IVR
-    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 1 });
+    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 2 });
     res.type('text/xml');
     res.send(twiml.toString());
   });
@@ -92,7 +92,7 @@ async function init() {
       console.log(`${formatDt(now)}: customer got speech for call ${formatSid(CallSid)} from ${otherParty}: ${SpeechResult}`);
       twiml.say(speech[otherParty][speechIdx]);
     }
-    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 1 });
+    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 2 });
     res.type('text/xml');
     res.send(twiml.toString());
   });

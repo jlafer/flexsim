@@ -1,13 +1,20 @@
 # Design Time
 node src/genconfig.js --domaindir domain --cfgdir config
+node src/genconfig.js --domaindir zscaler --cfgdir zscaler
 
 # Deploy Time
 node src/deploy.js --cfgdir config
+node src/deploy.js --cfgdir zscaler
 
 # Execution Time
 node src/agentsim.js --cfgdir config
 node src/custsim.js --cfgdir config
 node src/flexsim.js --cfgdir config -t 10
 
+node src/agentsim.js --cfgdir zscaler
+node src/custsim.js --cfgdir zscaler
+node src/flexsim.js --cfgdir zscaler -t 60
+
 # If cleanup needed
 node src/cleansim.js --cfgdir config
+node src/cleansim.js --cfgdir zscaler

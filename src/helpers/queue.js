@@ -10,7 +10,6 @@ async function createQueues(ctx) {
   const { args, cfg, client } = ctx;
   const { wrkspc } = args;
   const { queues: cfgQueues } = cfg;
-  const everyoneQueue = findObjInList('friendlyName', 'Everyone', ctx.previous.queues);
   const queues = [];
   for (let i = 0; i < cfgQueues.length; i++) {
     const data = cfgQueues[i];
@@ -18,13 +17,13 @@ async function createQueues(ctx) {
     console.log('createQueues:', pickKeyProps(queue));
     queues.push(queue);
   }
+  const everyoneQueue = findObjInList('friendlyName', 'Everyone', ctx.queues);
   queues.push(everyoneQueue);
   return queues;
 }
 
 async function removeQueues(ctx) {
-  const { args, cfg, client, previous } = ctx;
-  const { queues } = previous;
+  const { args, cfg, client, queues } = ctx;
   const { wrkspc } = args;
   const { queues: cfgQueues } = cfg;
   for (let i = 0; i < queues.length; i++) {

@@ -6,7 +6,7 @@ const { parseAndValidateArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { fetchQueues, createQueues, removeQueues } = require("./helpers/queue");
-const { createWorkers, removeWorkers } = require('./helpers/worker');
+const { createWorkers, fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
 const { createWorkflow, fetchWorkflows, removeWorkflow } = require('./helpers/workflow');
 
 async function run() {
@@ -22,9 +22,9 @@ async function run() {
 run();
 
 async function fetchCurrInfra(context) {
-  context.previous = {};
-  context.previous.queues = await fetchQueues(context);
-  context.previous.workflows = await fetchWorkflows(context);
+  context.queues = await fetchQueues(context);
+  context.workflows = await fetchWorkflows(context);
+  context.workers = await fetchFlexsimWorkers(context);
   context.activities = await fetchActivities(context);
   context.channels = await fetchTaskChannels(context);
 }

@@ -39,9 +39,8 @@ const createWorkflow = async (ctx) => {
 };
 
 async function removeWorkflow(ctx) {
-  const { args, cfg, client, previous } = ctx;
+  const { args, cfg, client, workflows } = ctx;
   const { wrkspc } = args;
-  const { workflows } = previous;
   const { workflow } = cfg;
   for (let i = 0; i < workflows.length; i++) {
     const { sid, friendlyName } = workflows[i];

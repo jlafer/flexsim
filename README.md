@@ -141,13 +141,15 @@ The optional command-line options include:
 
 
 ### cleansim
+The `cleansim` script is used to reset or remove a flexsim deployment. By default, it deletes any Tasks that remain from a previous execution of the simulator. It also signs out any Workers who are signed in. With the `--dletWorkers` option, you can remove all flexsim workers.
+
 To run the `cleansim` script:
 ```
 node ./src/cleansim [--cfgdir dir] [--acct ACxxx] [--auth abcde] [--wrkspc WSxxxx] [--dletWorkers boolean]
 ```
 The optional command-line options include:
-- `cfgdir` specifies the directory where the configuration files to be read are located
-- `dletWorkers` indicates whether the simulation agents should also be removed from the project
+- `cfgdir` specifies the directory where the configuration files to be read are located.
+- `dletWorkers` indicates whether the simulation agents should also be removed from the project.
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 
 NOTE: if you receive an error message saying that the Workflow could not be found, this probably means your configuration has changed significantly since deployment (or nothing has been deployed). You can always manually delete old simulation resources via the Twilio Console.

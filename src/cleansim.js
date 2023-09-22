@@ -5,7 +5,7 @@ const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { removeTasks } = require('./helpers/task');
-const { fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
+const { fetchFlexsimWorkers, logoutWorkers, removeWorkers } = require('./helpers/worker');
 const { fetchWorkflow } = require('./helpers/workflow');
 
 async function run() {
@@ -19,9 +19,11 @@ async function run() {
   else
     console.log(`cannot read workflow???`);
   await removeTasks(context);
+  await logoutWorkers(context);
   if (args.dletWorkers) {
     await removeWorkers(context);
   }
+  console.log('flexsim cleanup complete');
 }
 
 run();
@@ -29,9 +31,7 @@ run();
 async function loadTwilioResources(context) {
   context.workflow = await fetchWorkflow(context);
   context.workers = await fetchFlexsimWorkers(context);
-  if (context.args.dletWorkers) {
-    context.activities = await fetchActivities(context);
-  }
+  context.activities = await fetchActivities(context);
 }
 
 const initializeContext = (cfg, args) => {

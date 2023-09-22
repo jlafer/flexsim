@@ -1,0 +1,12 @@
+# Design Time
+node src/genconfig.js --domaindir domain --cfgdir config
+
+# Deploy Time
+node src/deploy.js --cfgdir config
+
+# Execution Time
+node src/agentsim.js --cfgdir config
+node src/custsim.js --cfgdir config
+
+# If cleanup needed
+node src/cleansim.js --cfgdir config

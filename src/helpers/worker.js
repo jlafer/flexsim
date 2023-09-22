@@ -21,7 +21,7 @@ const fetchWorker = async (ctx, sid) => {
   }
 };
 
-const fetchWorkers = async (ctx) => {
+const fetchAllWorkers = async (ctx) => {
   const { args, client } = ctx;
   const allWorkers = await client.taskrouter.v1.workspaces(args.wrkspc).workers.list();
   const workers = allWorkers.map(pickKeyProps);
@@ -29,7 +29,7 @@ const fetchWorkers = async (ctx) => {
 };
 
 const fetchFlexsimWorkers = async (ctx) => {
-  const allWorkers = await fetchWorkers(ctx);
+  const allWorkers = await fetchAllWorkers(ctx);
   const workers = allWorkers.filter(hasAttributeValue('flexsim', ctx.cfg.metadata.brand));
   return workers;
 };
@@ -59,16 +59,23 @@ async function updateWorkerChannels(client, wrkspc, workerSid, workerChannels, c
   }
 }
 
-async function removeWorkers(ctx) {
-  const { args, client, activities } = ctx;
-  const { wrkspc } = args;
+async function logoutWorkers(ctx) {
+  const { activities, workers } = ctx;
   const offlineAct = findObjInList('friendlyName', 'Offline', activities);
-  const workers = await fetchFlexsimWorkers(ctx);
   for (let i = 0; i < workers.length; i++) {
     const { sid, friendlyName, activityName } = workers[i];
     if (activityName !== 'Offline') {
+      console.log(`signing off agent ${friendlyName}`);
       await changeActivity(ctx, sid, offlineAct.sid);
     }
+  }
+}
+
+async function removeWorkers(ctx) {
+  const { args, client, workers } = ctx;
+  const { wrkspc } = args;
+  for (let i = 0; i < workers.length; i++) {
+    const { sid, friendlyName } = workers[i];
     console.log(`removing worker: ${friendlyName}`);
     await client.taskrouter.v1.workspaces(wrkspc).workers(sid).remove();
   }
@@ -96,8 +103,8 @@ module.exports = {
   changeActivity,
   createWorkers,
   fetchFlexsimWorkers,
-  fetchWorkers,
   fetchWorker,
   getWorker,
+  logoutWorkers,
   removeWorkers
 }

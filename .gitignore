@@ -1,10 +1,11 @@
 node_modules
 TODO.txt
 .env
-.env.flexstats
+.env.*
+!.env.sample
 config/
-zscaler/
 testWorker.json
 samples.json
 ngrok.yaml
 simngrok.sh
+execution.txt

@@ -17,7 +17,8 @@ const speech = {
   "ivr": [
     "I have a problem with the device.",
     "Very short battery life.",
-    "No."
+    "No.",
+    "Alright."
   ],
   "agent": [
     "Hello. I am having a problem with your product.",
@@ -60,17 +61,17 @@ async function init() {
       connectedUrl: `${args.custsimHost}/callConnected`,
       statusUrl: `${args.custsimHost}/callStatus`
     });
-    console.log(`customer placed call ${formatSid(callSid)}`);
+    console.log(`customer-out call placed: ${formatSid(callSid)}`);
     mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr', speechIdx: 0 });
     res.send({ callSid });
   });
 
-  // the callConnected endpoint is called by the Twilio webhook when the call
-  // is answered by the center number app (see "connectedUrl" above)
+  // the callConnected endpoint is called by the 'connectedUrl' callback when
+  // the call is answered by the center number app (see "connectedUrl" above)
 
   app.post('/callConnected', async (req, res) => {
     const now = Date.now();
-    const { client, args } = context;
+    const { args } = context;
     console.log(`${formatDt(now)}: customer call connected to the IVR`);
     const twiml = new VoiceResponse();
     // get initial greeting from the IVR
@@ -79,20 +80,24 @@ async function init() {
     res.send(twiml.toString());
   });
 
-  // the speechGathered endpoint is called by the Twilio webhook
-  // when speech is gathered from the center app by this app
+  // the speechGathered endpoint is called by the Gather callback
+  // when speech is gathered by this app from the center app or from agentsim
 
   app.post('/speechGathered', async (req, res) => {
     const now = Date.now();
     const { args } = context;
     const { CallSid, SpeechResult } = req.body;
+    const { otherParty, speechIdx } = callToIxn(context, CallSid);
+    console.log(`${formatDt(now)}: /speechGathered called: call ${formatSid(CallSid)} from ${otherParty}`);
     const twiml = new VoiceResponse();
-    if (SpeechResult.length > 0) {
-      const { otherParty, speechIdx } = callToIxn(context, CallSid);
-      console.log(`${formatDt(now)}: customer got speech for call ${formatSid(CallSid)} from ${otherParty}: ${SpeechResult}`);
+    if (SpeechResult && SpeechResult.length > 0) {
+      console.log(`  customer got speech: ${SpeechResult}`);
       twiml.say(speech[otherParty][speechIdx]);
+      console.log(`  so saying: ${speech[otherParty][speechIdx]}`);
+      incrementSpeechIdx(context, CallSid);
     }
-    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 2 });
+    console.log(`  /now gathering again for call ${formatSid(CallSid)}`);
+    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 2, actionOnEmptyResult: true });
     res.type('text/xml');
     res.send(twiml.toString());
   });
@@ -103,12 +108,13 @@ async function init() {
     const { args, client, syncMap } = context;
     const { ixnId } = req.body;
     const now = Date.now();
-    console.log(`${formatDt(now)}: called:`, ixnId);
+    console.log(`${formatDt(now)}: /callRouting called: ixnId = ${ixnId}`);
 
     const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
     const { data } = ixnDataItem;
     const { ixnValues } = data;
     console.log(`  call routing ixnValues:`, ixnValues);
+    // get customer-out call SID, needed for hanging up call
     const { callSid, otherParty } = ixnToCall(context, ixnId);
     if (!!callSid) {
       setTimeout(
@@ -130,14 +136,14 @@ async function init() {
   });
 
   // the /agentJoined endpoint is called from the agentsim.conferenceStatus endpoint
+  //   when the agent joins the conference
 
   app.post('/agentJoined', async (req, res) => {
-    const { args, client, syncMap } = context;
-    const { ixnId, taskSid, customerCallSid } = req.body;
-    const { callSid } = ixnToCall(context, ixnId);
-    mapCallToIxn(context, callSid, ixnId, { otherParty: 'agent', speechIdx: 0 })
     const now = Date.now();
     console.log(`${formatDt(now)}: received notify of agent joining call:`, req.body);
+    const { args, client, syncMap } = context;
+    const { ixnId } = req.body;
+    setOtherParty(context, ixnId, 'agent');
     res.status(200).send({});
   });
 
@@ -174,7 +180,7 @@ const initializeContext = (cfg, args) => {
   return context;
 }
 
-// link the outbound customer call SID and the ixnId with the ixnData
+// link the customer-out call SID and the ixnId with the ixnData
 const mapCallToIxn = (ctx, callSid, ixnId, ixnData) => {
   ctx.ixndataByIxnId[ixnId] = { ...ixnData, callSid };
   ctx.ixndataByCallSid[callSid] = { ...ixnData, ixnId };
@@ -185,6 +191,17 @@ const unmapCallToIxn = (ctx, callSid) => {
   R.dissoc(ixnData.ixnId, ctx.ixndataByIxnId);
   R.dissoc(callSid, ctx.ixndataByCallSid);
 }
+
+const setOtherParty = (ctx, ixnId, partyStr) => {
+  const ixnData = ixnToCall(ctx, ixnId);
+  mapCallToIxn(ctx, ixnData.callSid, ixnId, { otherParty: partyStr, speechIdx: 0 });
+};
+
+const incrementSpeechIdx = (ctx, callSid) => {
+  const ixnData = callToIxn(ctx, callSid);
+  const newIxnData = { otherParty: ixnData.otherParty, speechIdx: ixnData.speechIdx + 1 };
+  mapCallToIxn(ctx, callSid, ixnData.ixnId, newIxnData);
+};
 
 const ixnToCall = (ctx, ixnId) => {
   return ctx.ixndataByIxnId[ixnId];

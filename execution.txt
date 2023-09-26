@@ -18,3 +18,5 @@ node src/flexsim.js --cfgdir config/zscaler -t 60
 # If cleanup needed
 node src/cleansim.js --cfgdir config/flexstats
 node src/cleansim.js --cfgdir config/zscaler
+
+aws polly synthesize-speech --output-format json --voice-id Joanna --text "hello world" --speech-mark-types='["sentence", "word", "viseme"]'

@@ -22,7 +22,7 @@
         "-d",
         "domain",
         "-c",
-        "config"
+        "config/flexstats"
       ]
     },
     {
@@ -35,7 +35,7 @@
       "program": "${workspaceFolder}/src/deploy.js",
       "args": [
         "-c",
-        "config"
+        "config/flexstats"
       ]
     },
     {
@@ -48,7 +48,7 @@
       "program": "${workspaceFolder}/src/flexsim.js",
       "args": [
         "-c",
-        "config",
+        "config/flexstats",
         "-t",
         "60"
       ]
@@ -63,7 +63,7 @@
       "program": "${workspaceFolder}/src/custsim.js",
       "args": [
         "-c",
-        "config"
+        "config/flexstats"
       ]
     },
     {
@@ -76,9 +76,7 @@
       "program": "${workspaceFolder}/src/agentsim.js",
       "args": [
         "-c",
-        "config",
-        "-t",
-        "60"
+        "config/flexstats"
       ]
     }
   ]

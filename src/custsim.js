@@ -13,22 +13,6 @@ const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
 const { makeCall, hangupCall } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
 
-const speech = {
-  "ivr": [
-    "I have a problem with the device.",
-    "Very short battery life.",
-    "No.",
-    "Alright."
-  ],
-  "agent": [
-    "Hello. I am having a problem with your product.",
-    "Well. The battery life seems incredibly short. The thing is almost unusable.",
-    "It only lasts about two hours and then I have to look for a charging station.",
-    "I don't want to upgrade but if that's the only solution then sign me up!",
-    "Thank you for your help. Good bye."
-  ]
-};
-
 async function init() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
@@ -67,39 +51,55 @@ async function init() {
   });
 
   // the callConnected endpoint is called by the 'connectedUrl' callback when
-  // the call is answered by the center number app (see "connectedUrl" above)
+  // the call is answered by the center number app (i.e., IVR) (see "connectedUrl" above)
 
   app.post('/callConnected', async (req, res) => {
     const now = Date.now();
-    const { args } = context;
+    const { args, cfg } = context;
     console.log(`${formatDt(now)}: customer call connected to the IVR`);
     const twiml = new VoiceResponse();
-    // get initial greeting from the IVR
-    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 2 });
+    addSpeechToTwiml(twiml, cfg, "ivr");
+
+    // use a gather to wait for agent to respond
+    twiml.gather({
+      input: 'dtmf',
+      finishOnKey: '#',
+      timeout: 5,
+      action: `${args.custsimHost}/digitsGathered`,
+      actionOnEmptyResult: true
+    });
     res.type('text/xml');
     res.send(twiml.toString());
   });
 
-  // the speechGathered endpoint is called by the Gather callback
-  // when speech is gathered by this app from the center app or from agentsim
+  // the digitsGathered endpoint is called by the Gather callback
+  // when DTMF is gathered from the agentsim or the gather times out
 
-  app.post('/speechGathered', async (req, res) => {
+  app.post('/digitsGathered', async (req, res) => {
+    const { args, cfg } = context;
     const now = Date.now();
-    const { args } = context;
-    const { CallSid, SpeechResult } = req.body;
-    const { otherParty, speechIdx } = callToIxn(context, CallSid);
-    console.log(`${formatDt(now)}: /speechGathered called: call ${formatSid(CallSid)} from ${otherParty}`);
+    const { CallSid, Digits } = req.body;
+    console.log(`${formatDt(now)}: /digitsGathered called for call ${formatSid(CallSid)}`);
     const twiml = new VoiceResponse();
-    if (SpeechResult && SpeechResult.length > 0) {
-      console.log(`  customer got speech: ${SpeechResult}`);
-      twiml.say(speech[otherParty][speechIdx]);
-      console.log(`  so saying: ${speech[otherParty][speechIdx]}`);
-      incrementSpeechIdx(context, CallSid);
+    if (Digits) {
+      console.log(`  customer got digit from agentsim: ${Digits}`);
+      const { ixnId } = callToIxn(context, CallSid);
+      twiml.play({ digits: `${ixnId}#` });
+      addSpeechToTwiml(twiml, cfg, 'agent');
     }
-    console.log(`  /now gathering again for call ${formatSid(CallSid)}`);
-    twiml.gather({ input: 'speech', action: `${args.custsimHost}/speechGathered`, speechTimeout: 2, actionOnEmptyResult: true });
+    else {
+      twiml.gather({
+        input: 'dtmf',
+        finishOnKey: '#',
+        timeout: 5,
+        action: `${args.custsimHost}/digitsGathered`,
+        actionOnEmptyResult: true
+      });
+    }
     res.type('text/xml');
-    res.send(twiml.toString());
+    const twimlStr = twiml.toString();
+    console.log('  generated twiml:', twimlStr);
+    res.send(twimlStr);
   });
 
   // the callRouting endpoint is called by the Studio flow after task creation (SendToFlex)
@@ -114,6 +114,7 @@ async function init() {
     const { data } = ixnDataItem;
     const { ixnValues } = data;
     console.log(`  call routing ixnValues:`, ixnValues);
+
     // get customer-out call SID, needed for hanging up call
     const { callSid, otherParty } = ixnToCall(context, ixnId);
     if (!!callSid) {
@@ -164,6 +165,22 @@ async function init() {
 }
 
 init();
+
+async function addSpeechToTwiml(twiml, cfg, otherParty) {
+  const { speech } = cfg;
+  const speechForParty = speech[otherParty];
+  let idx = 0;
+  speechForParty.forEach(line => {
+    const sepIdx = line.indexOf('-');
+    const duration = parseInt(line.slice(0, sepIdx)) + 1;
+    const text = line.slice(sepIdx);
+    if (idx % 2 === 0)
+      twiml.pause({ length: duration });
+    else
+      twiml.say({ voice: 'Polly.Joanna' }, text);
+    idx += 1;
+  });
+}
 
 async function loadTwilioResources(context) {
   const { args, client } = context;
@@ -248,6 +265,7 @@ function getArgs() {
 async function readConfiguration(args) {
   const { cfgdir } = args;
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
+  const speech = await readJsonFile(`${cfgdir}/speechData.json`);
   const workflow = await readJsonFile(`${cfgdir}/workflow.json`);
-  return { metadata, workflow };
+  return { metadata, speech, workflow };
 }

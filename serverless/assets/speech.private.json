@@ -1,0 +1,20 @@
+{
+  "ivr": [
+    "5-Welcome to Owl Industries. I am a virtual assistant. Please say the reason for your call.",
+    "2-I'm having a problem with the battery in my device.",
+    "7-I'm sorry to hear you're having troubles. Let me transfer you to a technical support engineer. Please wait while I transfer your call.",
+    "1-Thank you."
+  ],
+  "agent": [
+    "4-Hello. My name is John. How can I help you today?",
+    "3-Hi John. I am having a problem with the device.",
+    "3-Oh, I'm sorry to hear that. What seems to be the issue?",
+    "5-Well. The battery life seems incredibly short. The thing is almost unusable.",
+    "4-I see. How long does the battery last before it needs to be recharged?",
+    "4-It only lasts about two hours and then I have to look for a charging station.",
+    "5-How old is the device? If it's more than three years old, you probably need a new one.",
+    "3-I don't want to upgrade but if that's the only solution then sign me up!",
+    "6-Very good! I've placed and order for the latest version of the device. I'll send you a confirmation text.",
+    "2-Thank you for your help. Good bye."
+  ]
+}

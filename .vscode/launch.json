@@ -28,6 +28,19 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "GenTiming",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/src/gentiming.js",
+      "args": [
+        "-c",
+        "config/flexstats"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Deploy",
       "skipFiles": [
         "<node_internals>/**"

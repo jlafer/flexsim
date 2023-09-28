@@ -80,9 +80,6 @@ async function init() {
 
     if (channelName === 'voice') {
       const reservation = await startConference(context, TaskSid, ReservationSid);
-      //console.log('reservation:', reservation);
-      //const task = await fetchTask(context, TaskSid);
-      //console.log('task after starting conference:', task);
       res.status(200).send({});
     }
     else {
@@ -101,22 +98,50 @@ async function init() {
   // the phone number is defined in domain.center.agentsPhone
 
   app.post('/agentAnswered', async (req, res) => {
-    const { callsState } = context;
+    const { callsState, cfg } = context;
     const now = Date.now();
     const { CallSid } = req.body;
     console.log(`${formatDt(now)}: the agent has received the call: ${CallSid}`);
     callsState[CallSid] = { speechIdx: 0 };
 
     const twiml = new VoiceResponse();
-    twiml.say('Hi.');
+    twiml.play({ digits: '0#' });
     twiml.gather({
-      input: 'speech',
-      action: `${args.agentsimHost}/speechGathered`,
-      speechTimeout: 2,
+      input: 'dtmf',
+      finishOnKey: '#',
+      timeout: 5,
+      action: `${args.agentsimHost}/digitsGathered`,
       actionOnEmptyResult: true
     });
     res.type('text/xml');
-    res.send(twiml.toString());
+    const twimlStr = twiml.toString();
+    console.log('  generated twiml:', twimlStr);
+    res.send(twimlStr);
+  });
+
+  app.post('/digitsGathered', async (req, res) => {
+    const { cfg } = context;
+    const now = Date.now();
+    const { CallSid, Digits } = req.body;
+    console.log(`${formatDt(now)}: /digitsGathered called for call ${formatSid(CallSid)}`);
+    const twiml = new VoiceResponse();
+    if (Digits) {
+      console.log(`  agent got ixnId: ${Digits}`);
+      addSpeechToTwiml(twiml, cfg, "agent");
+    }
+    else {
+      twiml.gather({
+        input: 'dtmf',
+        finishOnKey: '#',
+        timeout: 5,
+        action: `${args.agentsimHost}/digitsGathered`,
+        actionOnEmptyResult: true
+      });
+    }
+    res.type('text/xml');
+    const twimlStr = twiml.toString();
+    console.log('  generated twiml:', twimlStr);
+    res.send(twimlStr);
   });
 
   app.post('/speechGathered', async (req, res) => {
@@ -157,7 +182,7 @@ async function init() {
     const { TaskSid, CustomerCallSid, CallSid, StatusCallbackEvent, Coaching } = req.body;
 
     // skip the duplicate notification that happens because both customer and agent parties
-    // are in the same Twilio project; also skip coaching from the TeamsView
+    // are in the same Twilio project; also skip any coaching from the TeamsView
     if (CallSid !== CustomerCallSid && StatusCallbackEvent === 'participant-join' && Coaching === 'false') {
       const now = Date.now();
       console.log(`${formatDt(now)}: /conferenceStatus: agent joined the conference call ${formatSid(CallSid)} and task ${formatSid(TaskSid)}`);
@@ -181,6 +206,22 @@ async function init() {
 }
 
 init();
+
+async function addSpeechToTwiml(twiml, cfg, otherParty, voice) {
+  const { speech } = cfg;
+  const speechForParty = speech[otherParty];
+  let idx = 0;
+  speechForParty.forEach(line => {
+    const sepIdx = line.indexOf('-');
+    const duration = parseInt(line.slice(0, sepIdx)) + 1;
+    const text = line.slice(sepIdx);
+    if (idx % 2 === 0)
+      twiml.say({ voice: 'Polly.Matthew' }, text);
+    else
+      twiml.pause({ length: duration });
+    idx += 1;
+  });
+}
 
 const notifyCustsim = async (ctx, taskAndCall) => {
   const { args } = ctx;
@@ -309,26 +350,7 @@ function getArgs() {
 async function readConfiguration(args) {
   const { cfgdir } = args;
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
+  const speech = await readJsonFile(`${cfgdir}/speechData.json`);
   const workers = await readJsonFile(`${cfgdir}/workers.json`);
-  return { metadata, workers };
+  return { metadata, speech, workers };
 }
-
-//app.post('/agentSpeechGathered', async (req, res) => {
-//  const { callsState, client } = context;
-//  const { CallSid, SpeechResult } = req.body;
-//  console.log(`${formatDt(now)}: speech gathered for call ${formatSid(CallSid)}:`, SpeechResult);
-//  const callState = callsState[CallSid];
-//  let speech;
-//  if (!!callState || callState.sayCnt > 5) {
-//    client.calls(CallSid)
-//      .update({ status: 'completed' });
-//    R.dissoc(CallSid, callsState);
-//  }
-//  else {
-//    callState.sayCnt = callState.sayCnt + 1;
-//    speech = `This is agent speech number ${callState.sayCnt}`;
-//    client.calls(CallSid)
-//      .update({ twiml: `<Response><Say>${speech}</Say></Response>` });
-//  }
-//  res.status(200).send({});
-//});

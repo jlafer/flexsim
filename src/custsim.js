@@ -46,7 +46,7 @@ async function init() {
       statusUrl: `${args.custsimHost}/callStatus`
     });
     console.log(`customer-out call placed: ${formatSid(callSid)}`);
-    mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr', speechIdx: 0 });
+    mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr' });
     res.send({ callSid });
   });
 
@@ -172,7 +172,7 @@ async function addSpeechToTwiml(twiml, cfg, otherParty) {
   let idx = 0;
   speechForParty.forEach(line => {
     const sepIdx = line.indexOf('-');
-    const duration = parseInt(line.slice(0, sepIdx)) + 1;
+    const duration = parseInt(line.slice(0, sepIdx)) + 2;
     const text = line.slice(sepIdx);
     if (idx % 2 === 0)
       twiml.pause({ length: duration });
@@ -211,13 +211,7 @@ const unmapCallToIxn = (ctx, callSid) => {
 
 const setOtherParty = (ctx, ixnId, partyStr) => {
   const ixnData = ixnToCall(ctx, ixnId);
-  mapCallToIxn(ctx, ixnData.callSid, ixnId, { otherParty: partyStr, speechIdx: 0 });
-};
-
-const incrementSpeechIdx = (ctx, callSid) => {
-  const ixnData = callToIxn(ctx, callSid);
-  const newIxnData = { otherParty: ixnData.otherParty, speechIdx: ixnData.speechIdx + 1 };
-  mapCallToIxn(ctx, callSid, ixnData.ixnId, newIxnData);
+  mapCallToIxn(ctx, ixnData.callSid, ixnId, { otherParty: partyStr });
 };
 
 const ixnToCall = (ctx, ixnId) => {

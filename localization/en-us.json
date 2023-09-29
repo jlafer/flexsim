@@ -5,11 +5,14 @@
     "country": "US",
     "state": "NE",
     "city": "OMAHA",
-    "zip": "54321"
+    "zip": "54321",
+    "ivrVoice": "Polly.Joanna",
+    "agentVoice": "Polly.Matthew"
   },
   "customers": {
     "country": "US",
-    "phoneFormat": "+1#########"
+    "phoneFormat": "+1#########",
+    "voice": "Polly.Kendra"
   },
   "queueFilterDim": "topic",
   "queueWorkerDims": [

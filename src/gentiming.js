@@ -8,32 +8,46 @@ const { parseAndValidateArgs } = require('./helpers/args');
 async function run() {
   const args = getArgs();
   const { locale, cfgdir } = args;
+  const cfg = await readConfiguration(args);
   const speech = await readSpeechData(args, locale);
-  const timingData = await genAudioTiming(speech);
+  const timingData = await genAudioTiming(cfg, speech);
   await writeToJsonFile(`${cfgdir}/speechData.json`, timingData);
 }
 
 run();
 
-async function genAudioTiming(speech) {
+async function genAudioTiming(cfg, speech) {
+  const { metadata } = cfg;
+  const { center, customers } = metadata;
   const { agent, ivr } = speech;
-  const ivrTiming = await getPartyTiming(ivr);
-  const agtTiming = await getPartyTiming(agent);
+  const ivrTiming = await getPartyTiming(ivr, center.ivrVoice, customers.voice);
+  const agtTiming = await getPartyTiming(agent, center.agentVoice, customers.voice);
   const data = { ivr: ivrTiming, agent: agtTiming };
   return data;
 }
 
-async function getPartyTiming(textList) {
+async function getPartyTiming(textList, centerVoice, custVoice) {
+  console.log(`==getPartyTiming for ${centerVoice} and ${custVoice}==`);
   const data = [];
+  let elapsedCalculated = 0;
+  let elapsedUsed = 0;
   for (let i = 0; i < textList.length; i++) {
     const text = textList[i];
-    const duration = await getTimingForResponse(text);
-    data.push(`${duration}-${text}`);
+    const voice = (i % 2 === 0) ? centerVoice : custVoice;
+    const durCalculated = await getTimingForResponse(text, voice);
+    elapsedCalculated += durCalculated;
+    console.log(`  elapsedCalculated = ${elapsedCalculated}`);
+    const usedSecs = Math.round((elapsedCalculated - elapsedUsed) / 1000);
+    console.log(`  usedSecs = ${usedSecs}`);
+    elapsedUsed += (usedSecs * 1000);
+    console.log(`  elapsedUsed = ${elapsedUsed}`);
+    data.push(`${usedSecs}-${text}`);
   }
   return data;
 }
 
-async function getTimingForResponse(speech) {
+async function getTimingForResponse(speech, voice) {
+  const [tech, persona] = voice.split('.');
   const client = new PollyClient();
   const input = {
     Engine: "standard",
@@ -42,7 +56,7 @@ async function getTimingForResponse(speech) {
     SpeechMarkTypes: ["viseme"],
     Text: speech,
     TextType: "text",
-    VoiceId: "Joanna",
+    VoiceId: persona
   };
   const command = new SynthesizeSpeechCommand(input);
   const response = await client.send(command);
@@ -53,12 +67,11 @@ async function getTimingForResponse(speech) {
   //console.log('linesArr:', linesArr);
   // get next to last line; it should contain the 'sil' record
   const json = linesArr[linesArr.length - 2];
-  console.log('json:', json);
+  //console.log('json:', json);
   const speechData = JSON.parse(json);
-  console.log('speechData:', speechData);
-  const duration = Math.round(speechData.time / 1000);
-  console.log('duration:', duration);
-  return duration;
+  //console.log('speechData:', speechData);
+  console.log('duration (mSec):', speechData.time);
+  return speechData.time;
 }
 
 async function readSpeechData(args) {
@@ -82,4 +95,10 @@ function getArgs() {
   console.log('cfgdir:', cfgdir);
   console.log('locale:', locale);
   return args;
+}
+
+async function readConfiguration(args) {
+  const { cfgdir } = args;
+  const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
+  return { metadata };
 }

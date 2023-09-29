@@ -97,6 +97,8 @@ async function init() {
     callsState[CallSid] = { speechIdx: 0 };
 
     const twiml = new VoiceResponse();
+    // added pause to ensure custsim is ready after its say/pause loop with the ivr
+    twiml.pause({ length: 2 });
     twiml.play({ digits: '0#' });
     twiml.gather({
       input: 'dtmf',
@@ -151,14 +153,14 @@ async function init() {
   // set when the "conference" instruction is issued in startConference (above)
 
   app.post('/conferenceStatus', async (req, res) => {
-    const { TaskSid, CustomerCallSid, CallSid, StatusCallbackEvent, Coaching } = req.body;
+    const { TaskSid, CustomerCallSid, CallSid, StatusCallbackEvent, Muted } = req.body;
 
     // skip the duplicate notification that happens because both customer and agent parties
     // are in the same Twilio project; also skip any coaching from the TeamsView
-    if (CallSid !== CustomerCallSid && StatusCallbackEvent === 'participant-join' && Coaching === 'false') {
+    if (CallSid !== CustomerCallSid && StatusCallbackEvent === 'participant-join' && Muted === 'false') {
       const now = Date.now();
       console.log(`${formatDt(now)}: /conferenceStatus: agent joined the conference call ${formatSid(CallSid)} and task ${formatSid(TaskSid)}`);
-      console.log(`  with CustomerCallSid ${formatSid(CustomerCallSid)} and Coaching = ${Coaching}`);
+      console.log(`  with CustomerCallSid ${formatSid(CustomerCallSid)} and Muted = ${Muted}`);
       const ixnId = taskToIxn(context, TaskSid);
       const data = await notifyCustsim(
         context,

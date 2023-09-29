@@ -5,14 +5,17 @@
   "customers": {
     "country": "US",
     "phoneFormat": "+1#########",
-    "customersPhone": "+15072747105"
+    "customersPhone": "+15072747105",
+    "voice": "Polly.Kendra"
   },
   "center": {
     "country": "US",
     "state": "IL",
     "city": "SPRINGFIELD",
     "zip": "12345",
-    "agentsPhone": "+18148134754"
+    "agentsPhone": "+18148134754",
+    "ivrVoice": "Polly.Joanna",
+    "agentVoice": "Polly.Matthew"
   },
   "queueWorkerDims": [
     "routing.skills"

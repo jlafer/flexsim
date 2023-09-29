@@ -17,14 +17,6 @@ const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
 
-const speech = [
-  "Alright. What seems to be the trouble?",
-  "I see. How long does the battery last before it needs to be recharged?",
-  "How old is the device? If it's more than three years old, you probably need a new one.",
-  "Very good! I've place and order for the latest version of the device. I'll send a confirmation text.",
-  "You're welcome. Goodbye."
-];
-
 async function init() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
@@ -56,7 +48,7 @@ async function init() {
 
     const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
     const { data } = ixnDataItem;
-    const newData = { ...data, taskSid: TaskSid, taskStatus: 'reserved' };
+    const newData = { ...data, taskSid: TaskSid, taskStatus: 'reserved', workerSid: WorkerSid };
     updateSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId, { data: newData });
 
     const { ixnValues, customer } = newData;
@@ -120,14 +112,25 @@ async function init() {
   });
 
   app.post('/digitsGathered', async (req, res) => {
-    const { cfg } = context;
+    const { args, cfg, client, dimValues, dimInstances, syncMap } = context;
     const now = Date.now();
     const { CallSid, Digits } = req.body;
     console.log(`${formatDt(now)}: /digitsGathered called for call ${formatSid(CallSid)}`);
     const twiml = new VoiceResponse();
     if (Digits) {
-      console.log(`  agent got ixnId: ${Digits}`);
-      addSpeechToTwiml(twiml, cfg, "agent");
+      console.log(`  got ixnId: ${Digits}`);
+      const talkTime = addSpeechToTwiml(twiml, cfg, 'agent', 'Polly.Matthew');
+      const ixnId = parseInt(Digits);
+      const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
+      const { data } = ixnDataItem;
+      const { customer, taskSid, workerSid } = data;
+      const { fullName: custName } = customer;
+      const worker = getWorker(context, workerSid);
+      const { friendlyName } = worker;
+      const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
+      const wrapTimeDim = getSingleDimInstance('wrapTime', dimInstances);
+      const wrapTime = getDimValue(dimValues, valuesDescriptor.id, wrapTimeDim);
+      scheduleCompleteTask(context, taskSid, custName, friendlyName, (talkTime + wrapTime));
     }
     else {
       twiml.gather({
@@ -142,37 +145,6 @@ async function init() {
     const twimlStr = twiml.toString();
     console.log('  generated twiml:', twimlStr);
     res.send(twimlStr);
-  });
-
-  app.post('/speechGathered', async (req, res) => {
-    const { callsState } = context;
-    const now = Date.now();
-    const { CallSid, SpeechResult } = req.body;
-    console.log(`${formatDt(now)}: /speechGathered called for call ${formatSid(CallSid)}`);
-    const twiml = new VoiceResponse();
-    if (SpeechResult && SpeechResult.length > 0) {
-      console.log(`  agent got speech: ${SpeechResult}`);
-      const callState = callsState[CallSid];
-      twiml.say(speech[callState.speechIdx]);
-      const newSpeechIdx = callState.speechIdx + 1;
-      callsState[CallSid] = { speechIdx: newSpeechIdx };
-      if (newSpeechIdx < speech.length) {
-        twiml.gather({
-          input: 'speech',
-          speechTimeout: 2,
-          action: `${args.agentsimHost}/speechGathered`,
-          actionOnEmptyResult: true
-        });
-      }
-      else
-        delete callsState[CallSid];
-    }
-    else {
-      delete callsState[CallSid];
-      twiml.say('Goodbye.');
-    }
-    res.type('text/xml');
-    res.send(twiml.toString());
   });
 
   // the /conferenceStatus endpoint is called by the conferenceStatusCallback,
@@ -207,20 +179,23 @@ async function init() {
 
 init();
 
-async function addSpeechToTwiml(twiml, cfg, otherParty, voice) {
+function addSpeechToTwiml(twiml, cfg, otherParty, voice) {
   const { speech } = cfg;
   const speechForParty = speech[otherParty];
+  let elapsed = 0;
   let idx = 0;
   speechForParty.forEach(line => {
     const sepIdx = line.indexOf('-');
     const duration = parseInt(line.slice(0, sepIdx)) + 1;
     const text = line.slice(sepIdx);
     if (idx % 2 === 0)
-      twiml.say({ voice: 'Polly.Matthew' }, text);
+      twiml.say({ voice }, text);
     else
       twiml.pause({ length: duration });
     idx += 1;
+    elapsed += duration;
   });
+  return elapsed;
 }
 
 const notifyCustsim = async (ctx, taskAndCall) => {
@@ -238,6 +213,11 @@ const notifyCustsim = async (ctx, taskAndCall) => {
 
 const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
   wrapupTask(context, TaskSid);
+  scheduleCompleteTask(context, TaskSid, custName, friendlyName, wrapTime)
+};
+
+function scheduleCompleteTask(context, TaskSid, custName, friendlyName, delaySec) {
+  console.log(`scheduleCompleteTask: for task ${formatSid(TaskSid)} in ${delaySec} secs`);
   setTimeout(
     function () {
       const now = Date.now();
@@ -247,9 +227,9 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
       completeTask(context, TaskSid, valuesDescriptor);
       R.dissoc(TaskSid, context.tasks);
     },
-    (wrapTime * 1000)
+    (delaySec * 1000)
   );
-};
+}
 
 async function loginAllWorkers(context) {
   const { workers } = context;

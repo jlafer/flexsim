@@ -47,9 +47,10 @@ async function createSyncMapItem(client, svcSid, syncMapSid, item) {
   }
 }
 
-function getSyncMapItem(client, svcSid, syncMapSid, key) {
-  return client.sync.v1.services(svcSid)
-    .syncMaps(syncMapSid)
+function getSyncMapItem(context, key) {
+  const { args, client, syncMap } = context;
+  return client.sync.v1.services(args.syncSvcSid)
+    .syncMaps(syncMap.sid)
     .syncMapItems(key)
     .fetch()
 }

@@ -1,7 +1,7 @@
 require("dotenv").config();
 const axios = require('axios');
 const {
-  calcDimsValues, formatDt, formatSid, getAttributes, getDimValue, getDimValues, getSingleDimInstance, localeToFakerModule, readJsonFile
+  calcDimsValues, formatSid, getAttributes, getDimValue, getDimValues, getSingleDimInstance, localeToFakerModule, readJsonFile
 } = require('flexsim-lib');
 
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
@@ -9,17 +9,18 @@ const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { createSyncMapItem, getOrCreateSyncMap } = require('./helpers/sync');
 const { submitTask } = require('./helpers/task');
-const { delay } = require('./helpers/util');
+const { delay, log } = require('./helpers/util');
 const { fetchWorkflow } = require('./helpers/workflow');
+
 
 async function run() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
-  console.log('cfg:', cfg);
+  log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
   const { client, dimValues, dimInstances, syncMap } = context;
-  console.log(`read workflow: ${context.workflow.friendlyName}`);
+  log(`read workflow: ${context.workflow.friendlyName}`);
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
   const arrivalDimAndInst = getSingleDimInstance('arrivalGap', dimInstances);
   const channelDimAndInst = getSingleDimInstance('channel', dimInstances);
@@ -36,17 +37,17 @@ async function run() {
     const syncMapItem = await createSyncMapItem(client, args.syncSvcSid, syncMap.sid, item);
     if (channelName === 'voice') {
       const callSid = await submitInteraction(context, ixnId, customer, valuesDescriptor);
-      console.log(`${formatDt(now)}: made call ${formatSid(callSid)}`);
+      log(`made call ${formatSid(callSid)}`);
     }
     else {
       const task = await submitTask(context, ixnId, customer, valuesDescriptor);
-      console.log(`${formatDt(now)}: made task ${formatSid(task.sid)}`);
+      log(`made task ${formatSid(task.sid)}`);
     }
     const arrivalGap = getDimValue(dimValues, valuesDescriptor.id, arrivalDimAndInst);
     await delay(arrivalGap * 1000);
     now = Date.now();
   }
-  console.log(`${formatDt(now)}: flexsim finished`);
+  log(`flexsim finished`);
 }
 
 run();

@@ -4,7 +4,7 @@ const express = require('express');
 const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
-  calcActivityChange, calcDimsValues, findObjInList, formatDt, formatSid,
+  calcActivityChange, calcDimsValues, findObjInList, formatSid,
   getDimValue, getSingleDimInstance, readJsonFile
 } = require('flexsim-lib');
 
@@ -13,9 +13,11 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem, updateSyncMapItem } = require('./helpers/sync');
 const { completeTask, startConference, wrapupTask } = require('./helpers/task');
+const { log, respondWithTwiml } = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
+
 
 async function init() {
   const args = getArgs();
@@ -23,12 +25,13 @@ async function init() {
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
   await loginAllWorkers(context);
+
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
   app.get('/', (req, res) => {
-    console.log(`agentsim said hello`);
+    log(`agentsim said hello`);
     res.send('Hello World!')
   })
 
@@ -37,7 +40,7 @@ async function init() {
   // for other channels, it accepts the reservation
 
   app.post('/reservation', async (req, res) => {
-    const { args, cfg, client, dimValues, dimInstances, syncMap } = context;
+    const { args, client, dimValues, dimInstances, syncMap } = context;
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
 
     const taskAttributes = JSON.parse(TaskAttributes);
@@ -46,7 +49,7 @@ async function init() {
 
     mapTaskToIxn(context, TaskSid, ixnId);
 
-    const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
+    const ixnDataItem = await getSyncMapItem(context, ixnId);
     const { data } = ixnDataItem;
     const newData = { ...data, taskSid: TaskSid, taskStatus: 'reserved', workerSid: WorkerSid };
     updateSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId, { data: newData });
@@ -58,8 +61,7 @@ async function init() {
 
     const worker = getWorker(context, WorkerSid);
     const { friendlyName } = worker;
-    const now = Date.now();
-    console.log(`${formatDt(now)}: ${friendlyName} reserved for task ${formatSid(TaskSid)}`);
+    log(`${friendlyName} reserved for task ${formatSid(TaskSid)}`);
 
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
     calcDimsValues(context, valuesDescriptor);
@@ -77,7 +79,7 @@ async function init() {
     else {
       setTimeout(
         function () {
-          console.log(`${formatDt(now)}: ${friendlyName} wrapping task ${formatSid(TaskSid)}`);
+          log(`${friendlyName} wrapping task ${formatSid(TaskSid)}`);
           doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime);
         },
         (talkTime * 1000)
@@ -91,9 +93,8 @@ async function init() {
 
   app.post('/agentAnswered', async (req, res) => {
     const { callsState, cfg } = context;
-    const now = Date.now();
     const { CallSid } = req.body;
-    console.log(`${formatDt(now)}: the agent has received the call: ${CallSid}`);
+    log(`the agent has received the call: ${CallSid}`);
     callsState[CallSid] = { speechIdx: 0 };
 
     const twiml = new VoiceResponse();
@@ -107,23 +108,19 @@ async function init() {
       action: `${args.agentsimHost}/digitsGathered`,
       actionOnEmptyResult: true
     });
-    res.type('text/xml');
-    const twimlStr = twiml.toString();
-    console.log('  generated twiml:', twimlStr);
-    res.send(twimlStr);
+    respondWithTwiml(res, twiml);
   });
 
   app.post('/digitsGathered', async (req, res) => {
-    const { args, cfg, client, dimValues, dimInstances, syncMap } = context;
-    const now = Date.now();
+    const { args, cfg, dimValues, dimInstances } = context;
     const { CallSid, Digits } = req.body;
-    console.log(`${formatDt(now)}: /digitsGathered called for call ${formatSid(CallSid)}`);
+    log(`/digitsGathered called for call ${formatSid(CallSid)}`);
     const twiml = new VoiceResponse();
     if (Digits) {
-      console.log(`  got ixnId: ${Digits}`);
+      log(`  got ixnId: ${Digits}`);
       const talkTime = addSpeechToTwiml(twiml, cfg, 'agent', 'Polly.Matthew');
       const ixnId = parseInt(Digits);
-      const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
+      const ixnDataItem = await getSyncMapItem(context, ixnId);
       const { data } = ixnDataItem;
       const { customer, taskSid, workerSid } = data;
       const { fullName: custName } = customer;
@@ -143,10 +140,7 @@ async function init() {
         actionOnEmptyResult: true
       });
     }
-    res.type('text/xml');
-    const twimlStr = twiml.toString();
-    console.log('  generated twiml:', twimlStr);
-    res.send(twimlStr);
+    respondWithTwiml(res, twiml);
   });
 
   // the /conferenceStatus endpoint is called by the conferenceStatusCallback,
@@ -158,9 +152,8 @@ async function init() {
     // skip the duplicate notification that happens because both customer and agent parties
     // are in the same Twilio project; also skip any coaching from the TeamsView
     if (CallSid !== CustomerCallSid && StatusCallbackEvent === 'participant-join' && Muted === 'false') {
-      const now = Date.now();
-      console.log(`${formatDt(now)}: /conferenceStatus: agent joined the conference call ${formatSid(CallSid)} and task ${formatSid(TaskSid)}`);
-      console.log(`  with CustomerCallSid ${formatSid(CustomerCallSid)} and Muted = ${Muted}`);
+      log(`/conferenceStatus: agent joined the conference call ${formatSid(CallSid)} and task ${formatSid(TaskSid)}`);
+      log(`  with CustomerCallSid ${formatSid(CustomerCallSid)} and Muted = ${Muted}`);
       const ixnId = taskToIxn(context, TaskSid);
       const data = await notifyCustsim(
         context,
@@ -175,7 +168,7 @@ async function init() {
   });
 
   app.listen(args.port, () => {
-    console.log(`agentsim listening on port ${args.port}`)
+    log(`agentsim listening on port ${args.port}`)
   });
 }
 
@@ -219,13 +212,12 @@ const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
 };
 
 function scheduleCompleteTask(context, TaskSid, custName, friendlyName, delaySec) {
-  console.log(`scheduleCompleteTask: for task ${formatSid(TaskSid)} in ${delaySec} secs`);
+  log(`scheduleCompleteTask: for task ${formatSid(TaskSid)} in ${delaySec} secs`);
   setTimeout(
     function () {
-      const now = Date.now();
       const valuesDescriptor = { entity: 'tasks', phase: 'complete', id: custName };
       calcDimsValues(context, valuesDescriptor);
-      console.log(`${formatDt(now)}: ${friendlyName} completing task ${formatSid(TaskSid)}`);
+      log(`${friendlyName} completing task ${formatSid(TaskSid)}`);
       completeTask(context, TaskSid, valuesDescriptor);
       R.dissoc(TaskSid, context.tasks);
     },
@@ -238,13 +230,12 @@ async function loginAllWorkers(context) {
   for (let i = 0; i < workers.length; i++) {
     const worker = workers[i];
     const { sid, friendlyName, attributes } = worker;
-    console.log(`${friendlyName} [${attributes.full_name}] signing in`);
+    log(`${friendlyName} [${attributes.full_name}] signing in`);
     changeActivityAndWait(context, sid, 'Available');
   }
 }
 
 async function changeActivityAndWait(context, WorkerSid, activityName) {
-  const now = Date.now();
   const worker = await fetchWorker(context, WorkerSid);
   const { sid, friendlyName, activityName: currActivityName } = worker;
 
@@ -252,7 +243,7 @@ async function changeActivityAndWait(context, WorkerSid, activityName) {
   const activity = findObjInList('friendlyName', activityName, activities);
 
   if (activityName !== currActivityName) {
-    console.log(`${formatDt(now)}: ${friendlyName} changing from ${currActivityName} to ${activityName}`);
+    log(`${friendlyName} changing from ${currActivityName} to ${activityName}`);
     try {
       await changeActivity(context, sid, activity.sid);
     }

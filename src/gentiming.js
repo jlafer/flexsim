@@ -1,9 +1,10 @@
 require("dotenv").config();
-const R = require('ramda');
 const { readJsonFile, writeToJsonFile } = require('flexsim-lib');
 const { PollyClient, SynthesizeSpeechCommand } = require("@aws-sdk/client-polly");
 
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
+const { log } = require('./helpers/util');
+
 
 async function run() {
   const args = getArgs();
@@ -27,7 +28,7 @@ async function genAudioTiming(cfg, speech) {
 }
 
 async function getPartyTiming(textList, centerVoice, custVoice) {
-  console.log(`==getPartyTiming for ${centerVoice} and ${custVoice}==`);
+  log(`==getPartyTiming for ${centerVoice} and ${custVoice}==`);
   const data = [];
   let elapsedCalculated = 0;
   let elapsedUsed = 0;
@@ -36,11 +37,11 @@ async function getPartyTiming(textList, centerVoice, custVoice) {
     const voice = (i % 2 === 0) ? centerVoice : custVoice;
     const durCalculated = await getTimingForResponse(text, voice);
     elapsedCalculated += durCalculated;
-    console.log(`  elapsedCalculated = ${elapsedCalculated}`);
+    log(`  elapsedCalculated = ${elapsedCalculated}`);
     const usedSecs = Math.round((elapsedCalculated - elapsedUsed) / 1000);
-    console.log(`  usedSecs = ${usedSecs}`);
+    log(`  usedSecs = ${usedSecs}`);
     elapsedUsed += (usedSecs * 1000);
-    console.log(`  elapsedUsed = ${elapsedUsed}`);
+    log(`  elapsedUsed = ${elapsedUsed}`);
     data.push(`${usedSecs}-${text}`);
   }
   return data;
@@ -60,17 +61,14 @@ async function getTimingForResponse(speech, voice) {
   };
   const command = new SynthesizeSpeechCommand(input);
   const response = await client.send(command);
-  //console.log('speech response:', response);
   const lines = await response.AudioStream.transformToString();
-  //console.log('speech lines:', lines);
   const linesArr = lines.split('\n');
-  //console.log('linesArr:', linesArr);
+
   // get next to last line; it should contain the 'sil' record
   const json = linesArr[linesArr.length - 2];
-  //console.log('json:', json);
+
   const speechData = JSON.parse(json);
-  //console.log('speechData:', speechData);
-  console.log('duration (mSec):', speechData.time);
+  log('duration (mSec):', speechData.time);
   return speechData.time;
 }
 

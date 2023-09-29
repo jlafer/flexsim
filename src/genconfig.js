@@ -3,6 +3,7 @@ const { checkAndFillDomain, genConfiguration, readJsonFile, writeCfgToCfgdir } =
 
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 
+
 async function run() {
   const args = getArgs();
   const { cfgdir, locale, seed } = args;
@@ -13,7 +14,6 @@ async function run() {
     console.error('json validation errors:', result);
     throw new Error('validation of json failed');
   }
-
   const cfg = genConfiguration(result, locale, seed);
   await writeCfgToCfgdir(cfgdir, cfg);
 }

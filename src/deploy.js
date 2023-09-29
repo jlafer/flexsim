@@ -3,17 +3,19 @@ const { readJsonFile } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
+const { createSpeechAssets, fetchSpeechAssets, removeSpeechAssets } = require('./helpers/asset');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { fetchQueues, createQueues, removeQueues } = require('./helpers/queue');
-const { createSpeechAssets, fetchSpeechAssets, removeSpeechAssets } = require('./helpers/asset');
+const { log } = require('./helpers/util');
 const { createWorkers, fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
 const { createWorkflow, fetchWorkflows, removeWorkflow } = require('./helpers/workflow');
+
 
 async function run() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
-  console.log('cfg:', cfg);
+  log('cfg:', cfg);
   const context = initializeCommonContext(cfg, args);
   await fetchCurrInfra(context);
   await removeOldInfra(context);

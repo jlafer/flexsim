@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
 const {
-  formatDt, getDimValueParam, getSingleDimInstance, readJsonFile, formatSid
+  getDimValueParam, getSingleDimInstance, readJsonFile, formatSid
 } = require('flexsim-lib');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
@@ -10,13 +10,15 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
+const { log, respondWithTwiml } = require('./helpers/util');
 const { makeCall, hangupCall } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
+
 
 async function init() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
-  console.log('cfg:', cfg);
+  log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
 
@@ -27,23 +29,8 @@ async function init() {
   // the makeCustomerCall endpoint is called from flexsim
 
   app.post('/makeCustomerCall', async (req, res) => {
-    const now = Date.now();
-    console.log(`${formatDt(now)}: making a call`);
-    const { client, args, cfg } = context;
     const { ixnId } = req.body;
-    const sendDigits = `wwwww${ixnId}#`;
-    const { metadata } = cfg;
-    const { customers } = metadata;
-    const to = getAddress(context, 'voice');
-    const callSid = await makeCall({
-      client,
-      from: customers.customersPhone,
-      to,
-      sendDigits,
-      connectedUrl: `${args.custsimHost}/callConnected`,
-      statusUrl: `${args.custsimHost}/callStatus`
-    });
-    console.log(`customer-out call placed: ${formatSid(callSid)}`);
+    const callSid = await makeCallToCenter(context, ixnId);
     mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr' });
     res.send({ callSid });
   });
@@ -52,84 +39,56 @@ async function init() {
   // the call is answered by the center number app (i.e., IVR) (see "connectedUrl" above)
 
   app.post('/callConnected', async (req, res) => {
-    const now = Date.now();
     const { args, cfg } = context;
-    console.log(`${formatDt(now)}: customer call connected to the IVR`);
+    log(`customer call connected to the IVR`);
     const twiml = new VoiceResponse();
     addSpeechToTwiml(twiml, cfg, "ivr");
-
-    // use a gather to wait for agent to respond
-    twiml.gather({
-      input: 'dtmf',
-      finishOnKey: '#',
-      timeout: 5,
-      action: `${args.custsimHost}/digitsGathered`,
-      actionOnEmptyResult: true
-    });
-    res.type('text/xml');
-    res.send(twiml.toString());
+    // add a gather to wait for agent to respond
+    addGatherDigitsToTwiml(twiml, args.custsimHost);
+    respondWithTwiml(res, twiml);
   });
 
   // the digitsGathered endpoint is called by the Gather callback
-  // when DTMF is gathered from the agentsim or the gather times out
+  //   when DTMF is gathered from the agentsim or the gather times out
 
   app.post('/digitsGathered', async (req, res) => {
     const { args, cfg } = context;
-    const now = Date.now();
     const { CallSid, Digits } = req.body;
-    console.log(`${formatDt(now)}: /digitsGathered called for call ${formatSid(CallSid)}`);
+    log(`/digitsGathered called for call ${formatSid(CallSid)}`);
     const twiml = new VoiceResponse();
     if (Digits) {
-      console.log(`  customer got digit from agentsim: ${Digits}`);
+      log(`  customer got the go-ahead digit from agentsim: ${Digits}`);
       const { ixnId } = callToIxn(context, CallSid);
       twiml.play({ digits: `${ixnId}#` });
       addSpeechToTwiml(twiml, cfg, 'agent');
     }
     else {
-      twiml.gather({
-        input: 'dtmf',
-        finishOnKey: '#',
-        timeout: 5,
-        action: `${args.custsimHost}/digitsGathered`,
-        actionOnEmptyResult: true
-      });
+      addGatherDigitsToTwiml(twiml, args.custsimHost);
     }
-    res.type('text/xml');
-    const twimlStr = twiml.toString();
-    console.log('  generated twiml:', twimlStr);
-    res.send(twimlStr);
+    respondWithTwiml(res, twiml);
   });
 
-  // the callRouting endpoint is called by the Studio flow after task creation (SendToFlex)
+  // the callRouting endpoint is called by the Studio flow after agent task creation (SendToFlex)
 
   app.post('/callRouting', async (req, res) => {
-    const { args, client, syncMap } = context;
     const { ixnId } = req.body;
-    const now = Date.now();
-    console.log(`${formatDt(now)}: /callRouting called: ixnId = ${ixnId}`);
+    log(`/callRouting called: ixnId = ${ixnId}`);
 
-    const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
+    const ixnDataItem = await getSyncMapItem(context, ixnId);
     const { data } = ixnDataItem;
     const { ixnValues } = data;
-    console.log(`  call routing ixnValues:`, ixnValues);
+    log(`  call routing ixnValues:`, ixnValues);
 
     // get customer-out call SID, needed for hanging up call
-    const { callSid, otherParty } = ixnToCall(context, ixnId);
+    const { callSid } = ixnToCall(context, ixnId);
+
     if (!!callSid) {
-      setTimeout(
-        async function () {
-          const now = Date.now();
-          const ixnDataItem = await getSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId);
-          if (ixnDataItem.data.taskStatus === 'initiated') {
-            console.log(`${formatDt(now)}: abandoning call ${callSid}`);
-            hangupCall(client, callSid);
-          }
-        },
-        ixnValues.abandonTime * 1000
+      setTimeout(abandonCallIfRouting, ixnValues.abandonTime * 1000,
+        context, ixnId, callSid
       );
     }
     else {
-      console.warn(`callSid not found for ixnId = ${ixnId}??? no abandon timeout set`);
+      log(`callSid not found for ixnId = ${ixnId}??? no abandon timeout set`, null, 'warn');
     }
     res.status(200).send({});
   });
@@ -138,9 +97,7 @@ async function init() {
   //   when the agent joins the conference
 
   app.post('/agentJoined', async (req, res) => {
-    const now = Date.now();
-    console.log(`${formatDt(now)}: received notify of agent joining call:`, req.body);
-    const { args, client, syncMap } = context;
+    //log(`received notify of agent joining call:`, req.body);
     const { ixnId } = req.body;
     setOtherParty(context, ixnId, 'agent');
     res.status(200).send({});
@@ -149,22 +106,41 @@ async function init() {
   // the /callStatus endpoint is called from the Call's "status" webhook on hangup
 
   app.post('/callStatus', async (req, res) => {
-    const now = Date.now();
     const summary = R.pick(['CallSid', 'CallStatus', 'CallDuration'], req.body);
-    console.log(`${formatDt(now)}: callStatus called:`, summary);
+    log(`callStatus called:`, summary);
     const { CallSid } = req.body;
     unmapCallToIxn(context, CallSid);
     res.status(200).send({});
   });
 
   app.listen(args.port, () => {
-    console.log(`custsim listening on port ${args.port}`)
+    log(`custsim listening on port ${args.port}`)
   });
 }
 
 init();
 
-async function addSpeechToTwiml(twiml, cfg, otherParty) {
+async function makeCallToCenter(context, ixnId) {
+  log(`making call to center`);
+  const { client, args, cfg } = context;
+  const { metadata } = cfg;
+  const { customers } = metadata;
+  const to = getAddress(context, 'voice');
+  const sendDigits = `wwwww${ixnId}#`;
+
+  const callSid = await makeCall({
+    client,
+    from: customers.customersPhone,
+    to,
+    sendDigits,
+    connectedUrl: `${args.custsimHost}/callConnected`,
+    statusUrl: `${args.custsimHost}/callStatus`
+  });
+  log(`customer-out call placed: ${formatSid(callSid)}`);
+  return callSid;
+}
+
+function addSpeechToTwiml(twiml, cfg, otherParty) {
   const { speech } = cfg;
   const speechForParty = speech[otherParty];
   let idx = 0;
@@ -180,6 +156,25 @@ async function addSpeechToTwiml(twiml, cfg, otherParty) {
   });
 }
 
+function addGatherDigitsToTwiml(twiml, actionHost) {
+  twiml.gather({
+    input: 'dtmf',
+    finishOnKey: '#',
+    timeout: 5,
+    action: `${actionHost}/digitsGathered`,
+    actionOnEmptyResult: true
+  });
+}
+
+async function abandonCallIfRouting(context, ixnId, callSid) {
+  const { client } = context;
+  const ixnDataItem = await getSyncMapItem(context, ixnId);
+  if (ixnDataItem.data.taskStatus === 'initiated') {
+    log(`abandoning call ${callSid}`);
+    hangupCall(client, callSid);
+  }
+}
+
 async function loadTwilioResources(context) {
   const { args, client } = context;
   context.workflow = await fetchWorkflow(context);
@@ -189,7 +184,6 @@ async function loadTwilioResources(context) {
 
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
-  context.simStopTS = context.simStartTS + (args.timeLim * 1000);
   context.ixndataByIxnId = {};
   context.ixndataByCallSid = {};
   return context;
@@ -203,8 +197,12 @@ const mapCallToIxn = (ctx, callSid, ixnId, ixnData) => {
 
 const unmapCallToIxn = (ctx, callSid) => {
   const ixnData = callToIxn(ctx, callSid);
-  R.dissoc(ixnData.ixnId, ctx.ixndataByIxnId);
-  R.dissoc(callSid, ctx.ixndataByCallSid);
+  if (!!ixnData) {
+    R.dissoc(ixnData.ixnId, ctx.ixndataByIxnId);
+    R.dissoc(callSid, ctx.ixndataByCallSid);
+  }
+  else
+    log(`Warning: unmapCallToIxn did not find call ${formatSid(callSid)}`, null, 'warn');
 }
 
 const setOtherParty = (ctx, ixnId, partyStr) => {

@@ -5,25 +5,27 @@ const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { removeTasks } = require('./helpers/task');
+const { log } = require('./helpers/util');
 const { fetchFlexsimWorkers, logoutWorkers, removeWorkers } = require('./helpers/worker');
 const { fetchWorkflow } = require('./helpers/workflow');
+
 
 async function run() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
-  console.log('cfg:', cfg);
+  log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
   if (context.workflow)
-    console.log(`read workflow: ${context.workflow.friendlyName}`);
+    log(`read workflow: ${context.workflow.friendlyName}`);
   else
-    console.log(`cannot read workflow???`);
+    log(`cannot read workflow???`);
   await removeTasks(context);
   await logoutWorkers(context);
   if (args.dletWorkers) {
     await removeWorkers(context);
   }
-  console.log('flexsim cleanup complete');
+  log('flexsim cleanup complete');
 }
 
 run();

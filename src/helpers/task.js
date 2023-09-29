@@ -1,7 +1,10 @@
 const R = require('ramda');
 const {
-  findObjInList, formatDt, formatSid, getAttributes, getDimValue, getDimValueParam, getSingleDimInstance, hasAttributeValue
+  findObjInList, formatSid, getAttributes, getDimValue, getDimValueParam, getSingleDimInstance, hasAttributeValue
 } = require('flexsim-lib');
+
+const { log } = require('./util');
+
 
 const fetchTask = async (ctx, sid) => {
   const { args, client } = ctx;
@@ -87,7 +90,7 @@ const cancelTask = async (ctx, taskSid) => {
   const task = await fetchTask(ctx, taskSid);
   if (task.assignmentStatus === 'pending') {
     setTaskStatus('canceled', ctx, taskSid);
-    console.log(`canceling task ${formatSid(task.sid)}`);
+    log(`canceling task ${formatSid(task.sid)}`);
   }
 };
 
@@ -100,10 +103,9 @@ const completeTask = async (ctx, taskSid, valuesDescriptor) => {
   const completionAttributes = getAttributes(ctx, valuesDescriptor);
   const finalAttributes = R.mergeDeepRight(task.attributes, completionAttributes);
   await setTaskStatus('completed', ctx, taskSid);
-  const now = Date.now();
-  console.log(`${formatDt(now)}: task completed: ${formatSid(task.sid)}`);
+  log(`task completed: ${formatSid(task.sid)}`);
   await updateTaskAttributes(ctx, taskSid, finalAttributes);
-  //console.log(`${task.sid} now has attributes:`, task.attributes);
+  //log(`${task.sid} now has attributes:`, task.attributes);
 };
 
 const updateTaskAttributes = (ctx, taskSid, attributes) => {
@@ -114,7 +116,7 @@ const updateTaskAttributes = (ctx, taskSid, attributes) => {
       return task;
     })
     .catch(err => {
-      console.log(`ERROR: update of task ${taskSid} failed:`, err);
+      log(`ERROR: update of task ${taskSid} failed:`, err, 'error');
     })
 };
 
@@ -127,7 +129,7 @@ const setTaskStatus = (status, ctx, taskSid) => {
       return task
     })
     .catch(err => {
-      console.log(`ERROR: complete of task ${taskSid} failed:`, err);
+      log(`ERROR: complete of task ${taskSid} failed:`, err, 'error');
     })
 };
 
@@ -146,7 +148,7 @@ async function startConference(ctx, TaskSid, ReservationSid) {
       conferenceStatusCallback: `${args.agentsimHost}/conferenceStatus`,
       conferenceStatusCallbackEvent: ['join']
     });
-  //console.log('startConference:', response);
+  //log('startConference:', response);
   return response;
 }
 
@@ -156,7 +158,7 @@ async function removeTasks(ctx) {
   const tasks = await fetchFlexsimTasks(ctx);
   for (let i = 0; i < tasks.length; i++) {
     const { sid } = tasks[i];
-    console.log(`removing task: ${sid}`);
+    log(`removing task: ${sid}`);
     await client.taskrouter.v1.workspaces(wrkspc).tasks(sid).remove();
   }
 }

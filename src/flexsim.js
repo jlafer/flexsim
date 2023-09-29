@@ -4,7 +4,7 @@ const {
   calcDimsValues, formatDt, formatSid, getAttributes, getDimValue, getDimValues, getSingleDimInstance, localeToFakerModule, readJsonFile
 } = require('flexsim-lib');
 
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { createSyncMapItem, getOrCreateSyncMap } = require('./helpers/sync');
@@ -115,14 +115,7 @@ function getArgs() {
   args.locale = args.locale || 'en-us';
   args.custsimHost = CUSTSIM_HOST;
   args.syncSvcSid = SYNC_SVC_SID;
-  const { acct, wrkspc, cfgdir, timeLim, locale, custsimHost, syncSvcSid } = args;
-  console.log('acct:', acct);
-  console.log('wrkspc:', wrkspc);
-  console.log('cfgdir:', cfgdir);
-  console.log('timeLim:', timeLim);
-  console.log('locale:', locale);
-  console.log('custsimHost:', custsimHost);
-  console.log('syncSvcSid:', syncSvcSid);
+  logArgs(args);
   return args;
 }
 

@@ -2,7 +2,7 @@ require("dotenv").config();
 const { readJsonFile } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { fetchQueues, createQueues, removeQueues } = require('./helpers/queue');
@@ -57,11 +57,7 @@ function getArgs() {
   args.serverless = SERVERLESS_SVC_SID;
   args.cfgdir = args.cfgdir || 'config';
   args.assignURL = args.assignURL || ASSIGN_URL;
-  const { acct, wrkspc, cfgdir, assignURL } = args;
-  console.log('acct:', acct);
-  console.log('wrkspc:', wrkspc);
-  console.log('cfgdir:', cfgdir);
-  console.log('assignURL:', assignURL);
+  logArgs(args);
   return args;
 }
 

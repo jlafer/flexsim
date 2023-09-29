@@ -6,7 +6,7 @@ const {
 } = require('flexsim-lib');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
@@ -19,8 +19,6 @@ async function init() {
   console.log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
-  console.log(`read workflow: ${context.workflow.friendlyName}`);
-  const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
 
   const app = express();
   app.use(express.json());
@@ -244,15 +242,7 @@ function getArgs() {
   args.custsimHost = CUSTSIM_HOST;
   args.port = args.port || CUSTSIM_PORT || 3001;
   args.syncSvcSid = SYNC_SVC_SID;
-  const { acct, wrkspc, cfgdir, timeLim, locale, custsimHost, port, syncSvcSid } = args;
-  console.log('acct:', acct);
-  console.log('wrkspc:', wrkspc);
-  console.log('cfgdir:', cfgdir);
-  console.log('timeLim:', timeLim);
-  console.log('locale:', locale);
-  console.log('custsimHost:', custsimHost);
-  console.log('port:', port);
-  console.log('syncSvcSid:', syncSvcSid);
+  logArgs(args);
   return args;
 }
 

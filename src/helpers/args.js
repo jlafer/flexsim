@@ -15,8 +15,18 @@ const parseAndValidateArgs = (options) => {
   return argv;  
 }
 
+const logArgs = (args) => {
+  console.log('------- args -------')
+  R.toPairs(args).filter(([key, value]) => !R.includes(key, ['_', '$0']))
+    .forEach(([key, value]) => {
+      console.log(`${key}: ${value}`);
+    })
+  console.log('--------------------')
+};
+
 const aliasToOptionStr = ([key, alias]) => `-${key} [${alias}]`;
 
 module.exports = {
+  logArgs,
   parseAndValidateArgs
 }

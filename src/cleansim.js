@@ -2,7 +2,7 @@ require("dotenv").config();
 const { readJsonFile } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { removeTasks } = require('./helpers/task');
 const { fetchFlexsimWorkers, logoutWorkers, removeWorkers } = require('./helpers/worker');
@@ -50,11 +50,7 @@ function getArgs() {
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
   args.dletWorkers = args.dletWorkers || false;
-  const { acct, wrkspc, cfgdir, dletWorkers } = args;
-  console.log('acct:', acct);
-  console.log('wrkspc:', wrkspc);
-  console.log('cfgdir:', cfgdir);
-  console.log('dletWorkers:', dletWorkers);
+  logArgs(args);
   return args;
 }
 

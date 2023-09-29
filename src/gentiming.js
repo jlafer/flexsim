@@ -3,7 +3,7 @@ const R = require('ramda');
 const { readJsonFile, writeToJsonFile } = require('flexsim-lib');
 const { PollyClient, SynthesizeSpeechCommand } = require("@aws-sdk/client-polly");
 
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 
 async function run() {
   const args = getArgs();
@@ -90,10 +90,7 @@ function getArgs() {
     required: []
   });
   args.locale = args.locale || 'en-us';
-  const { domaindir, cfgdir, locale } = args;
-  console.log('domaindir:', domaindir);
-  console.log('cfgdir:', cfgdir);
-  console.log('locale:', locale);
+  logArgs(args);
   return args;
 }
 

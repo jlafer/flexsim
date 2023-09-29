@@ -1,7 +1,7 @@
 require("dotenv").config();
 const { checkAndFillDomain, genConfiguration, readJsonFile, writeCfgToCfgdir } = require('flexsim-lib');
 
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 
 async function run() {
   const args = getArgs();
@@ -37,10 +37,6 @@ function getArgs() {
   const { RANDOM_SEED } = process.env;
   args.locale = args.locale || 'en-us';
   args.seed = args.seed || RANDOM_SEED;
-  const { domaindir, cfgdir, locale, seed } = args;
-  console.log('domaindir:', domaindir);
-  console.log('cfgdir:', cfgdir);
-  console.log('locale:', locale);
-  console.log('seed:', seed);
+  logArgs(args);
   return args;
 }

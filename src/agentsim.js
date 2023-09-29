@@ -5,14 +5,14 @@ const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
   calcActivityChange, calcDimsValues, findObjInList, formatDt, formatSid,
-  getDimValue, getDimValueParam, getSingleDimInstance, readJsonFile
+  getDimValue, getSingleDimInstance, readJsonFile
 } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem, updateSyncMapItem } = require('./helpers/sync');
-const { completeTask, fetchTask, startConference, wrapupTask } = require('./helpers/task');
+const { completeTask, startConference, wrapupTask } = require('./helpers/task');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -317,15 +317,7 @@ function getArgs() {
   args.agentsimHost = AGENTSIM_HOST;
   args.custsimHost = CUSTSIM_HOST;
   args.syncSvcSid = SYNC_SVC_SID;
-  const { acct, wrkspc, cfgdir, port, timeLim, agentsimHost, custsimHost, syncSvcSid } = args;
-  console.log('acct:', acct);
-  console.log('wrkspc:', wrkspc);
-  console.log('cfgdir:', cfgdir);
-  console.log('port:', port);
-  console.log('timeLim:', timeLim);
-  console.log('agentsimHost:', agentsimHost);
-  console.log('custsimHost:', custsimHost);
-  console.log('syncSvcSid:', syncSvcSid);
+  logArgs(args);
   return args;
 }
 

@@ -10,7 +10,7 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
-const { log, respondWithTwiml } = require('./helpers/util');
+const { addGatherDigitsToTwiml, addSpeechToTwiml, log, respondWithTwiml } = require('./helpers/util');
 const { makeCall, hangupCall } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
 
@@ -42,7 +42,11 @@ async function init() {
     const { args, cfg } = context;
     log(`customer call connected to the IVR`);
     const twiml = new VoiceResponse();
-    addSpeechToTwiml(twiml, cfg, "ivr");
+    const { metadata, speech } = cfg;
+    addSpeechToTwiml(
+      twiml,
+      { speech: speech.ivr, isCenter: false, voice: metadata.customers.voice, pauseBetween: 2 }
+    );
     // add a gather to wait for agent to respond
     addGatherDigitsToTwiml(twiml, args.custsimHost);
     respondWithTwiml(res, twiml);
@@ -60,7 +64,11 @@ async function init() {
       log(`  customer got the go-ahead digit from agentsim: ${Digits}`);
       const { ixnId } = callToIxn(context, CallSid);
       twiml.play({ digits: `${ixnId}#` });
-      addSpeechToTwiml(twiml, cfg, 'agent');
+      const { metadata, speech } = cfg;
+      addSpeechToTwiml(
+        twiml,
+        { speech: speech.agent, isCenter: false, voice: metadata.customers.voice, pauseBetween: 2 }
+      );
     }
     else {
       addGatherDigitsToTwiml(twiml, args.custsimHost);
@@ -138,32 +146,6 @@ async function makeCallToCenter(context, ixnId) {
   });
   log(`customer-out call placed: ${formatSid(callSid)}`);
   return callSid;
-}
-
-function addSpeechToTwiml(twiml, cfg, otherParty) {
-  const { speech } = cfg;
-  const speechForParty = speech[otherParty];
-  let idx = 0;
-  speechForParty.forEach(line => {
-    const sepIdx = line.indexOf('-');
-    const duration = parseInt(line.slice(0, sepIdx)) + 2;
-    const text = line.slice(sepIdx);
-    if (idx % 2 === 0)
-      twiml.pause({ length: duration });
-    else
-      twiml.say({ voice: 'Polly.Joanna' }, text);
-    idx += 1;
-  });
-}
-
-function addGatherDigitsToTwiml(twiml, actionHost) {
-  twiml.gather({
-    input: 'dtmf',
-    finishOnKey: '#',
-    timeout: 5,
-    action: `${actionHost}/digitsGathered`,
-    actionOnEmptyResult: true
-  });
 }
 
 async function abandonCallIfRouting(context, ixnId, callSid) {

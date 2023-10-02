@@ -13,7 +13,7 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem, updateSyncMapItem } = require('./helpers/sync');
 const { completeTask, startConference, wrapupTask } = require('./helpers/task');
-const { log, respondWithTwiml } = require('./helpers/util');
+const { addGatherDigitsToTwiml, addSpeechToTwiml, log, respondWithTwiml } = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -71,6 +71,7 @@ async function init() {
     The syncmap is documented in helpers/sync.js
 
   */
+
   async function updateIxnDataFromReservation(context, body) {
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = body;
     const taskAttributes = JSON.parse(TaskAttributes);
@@ -102,16 +103,11 @@ async function init() {
     callsState[CallSid] = { speechIdx: 0 };
 
     const twiml = new VoiceResponse();
+
     // added pause to ensure custsim is ready after its say/pause loop with the ivr
     twiml.pause({ length: 2 });
     twiml.play({ digits: '0#' });
-    twiml.gather({
-      input: 'dtmf',
-      finishOnKey: '#',
-      timeout: 5,
-      action: `${args.agentsimHost}/digitsGathered`,
-      actionOnEmptyResult: true
-    });
+    addGatherDigitsToTwiml(twiml, args.agentsimHost);
     respondWithTwiml(res, twiml);
   });
 
@@ -122,7 +118,11 @@ async function init() {
     const twiml = new VoiceResponse();
     if (Digits) {
       log(`  got ixnId: ${Digits}`);
-      const talkTime = addSpeechToTwiml(twiml, cfg, 'agent', 'Polly.Matthew');
+      const { metadata, speech } = cfg;
+      const talkTime = addSpeechToTwiml(
+        twiml,
+        { speech: speech.agent, isCenter: true, voice: metadata.center.agentVoice, pauseBetween: 2 }
+      );
       const ixnId = parseInt(Digits);
       const ixnDataItem = await getSyncMapItem(context, ixnId);
       const { data } = ixnDataItem;
@@ -134,13 +134,7 @@ async function init() {
       scheduleCompleteTask(context, taskSid, custName, friendlyName, (talkTime + wrapTime));
     }
     else {
-      twiml.gather({
-        input: 'dtmf',
-        finishOnKey: '#',
-        timeout: 5,
-        action: `${args.agentsimHost}/digitsGathered`,
-        actionOnEmptyResult: true
-      });
+      addGatherDigitsToTwiml(twiml, args.agentsimHost);
     }
     respondWithTwiml(res, twiml);
   });
@@ -175,25 +169,6 @@ async function init() {
 }
 
 init();
-
-function addSpeechToTwiml(twiml, cfg, otherParty, voice) {
-  const { speech } = cfg;
-  const speechForParty = speech[otherParty];
-  let elapsed = 0;
-  let idx = 0;
-  speechForParty.forEach(line => {
-    const sepIdx = line.indexOf('-');
-    const duration = parseInt(line.slice(0, sepIdx)) + 1;
-    const text = line.slice(sepIdx);
-    if (idx % 2 === 0)
-      twiml.say({ voice }, text);
-    else
-      twiml.pause({ length: duration });
-    idx += 1;
-    elapsed += duration;
-  });
-  return elapsed;
-}
 
 const notifyCustsim = async (ctx, taskAndCall) => {
   const { args } = ctx;

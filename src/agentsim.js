@@ -5,7 +5,7 @@ const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
   calcActivityChange, calcDimsValues, findObjInList, formatSid,
-  getDimValue, getSingleDimInstance, readJsonFile
+  getDimInstanceValue, readJsonFile
 } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
@@ -40,53 +40,57 @@ async function init() {
   // for other channels, it accepts the reservation
 
   app.post('/reservation', async (req, res) => {
-    const { args, client, dimValues, dimInstances, syncMap } = context;
-    const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = req.body;
+    const { dimValues, dimInstances } = context;
 
-    const taskAttributes = JSON.parse(TaskAttributes);
-    const { ixnId } = taskAttributes;
-    const workerAttributes = JSON.parse(WorkerAttributes);
-
-    mapTaskToIxn(context, TaskSid, ixnId);
-
-    const ixnDataItem = await getSyncMapItem(context, ixnId);
-    const { data } = ixnDataItem;
-    const newData = { ...data, taskSid: TaskSid, taskStatus: 'reserved', workerSid: WorkerSid };
-    updateSyncMapItem(client, args.syncSvcSid, syncMap.sid, ixnId, { data: newData });
-
-    const { ixnValues, customer } = newData;
-    const { fullName: custName } = customer;
-    addTaskValuesFromSync(context, custName, ixnValues);
-    addDimValuesFromReservation(context, custName, TaskAge, workerAttributes);
-
-    const worker = getWorker(context, WorkerSid);
-    const { friendlyName } = worker;
-    log(`${friendlyName} reserved for task ${formatSid(TaskSid)}`);
-
-    const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
+    const ixnData = await updateIxnDataFromReservation(context, req.body);
+    const { workerSid, taskSid, reservationSid, customer } = ixnData;
+    const worker = getWorker(context, workerSid);
+    log(`${worker.friendlyName} reserved for task ${formatSid(taskSid)}`);
+    const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: customer.fullName };
     calcDimsValues(context, valuesDescriptor);
-    const talkTimeDim = getSingleDimInstance('talkTime', dimInstances);
-    const talkTime = getDimValue(dimValues, valuesDescriptor.id, talkTimeDim);
-    const wrapTimeDim = getSingleDimInstance('wrapTime', dimInstances);
-    const wrapTime = getDimValue(dimValues, valuesDescriptor.id, wrapTimeDim);
-    const channelDimInstance = getSingleDimInstance('channel', dimInstances);
-    const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDimInstance);
-
+    const talkTime = getDimInstanceValue(dimInstances, dimValues, 'talkTime', valuesDescriptor.id);
+    const wrapTime = getDimInstanceValue(dimInstances, dimValues, 'wrapTime', valuesDescriptor.id);
+    const channelName = getDimInstanceValue(dimInstances, dimValues, 'channel', valuesDescriptor.id);
     if (channelName === 'voice') {
-      const reservation = await startConference(context, TaskSid, ReservationSid);
+      const reservation = await startConference(context, taskSid, reservationSid);
       res.status(200).send({});
     }
     else {
-      setTimeout(
-        function () {
-          log(`${friendlyName} wrapping task ${formatSid(TaskSid)}`);
-          doWrapupTask(context, TaskSid, custName, friendlyName, wrapTime);
-        },
-        (talkTime * 1000)
-      );  
+      setTimeout(doWrapupTask, (talkTime * 1000),
+        context, taskSid, customer.fullName, worker.friendlyName, wrapTime
+      );
       res.status(200).send({ instruction: 'accept' });
     }
   })
+
+  /*
+    Data
+
+    ctx.ixnsByTaskSid[taskSid] = ixnId
+
+    The syncmap is documented in helpers/sync.js
+
+  */
+  async function updateIxnDataFromReservation(context, body) {
+    const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = body;
+    const taskAttributes = JSON.parse(TaskAttributes);
+    const { ixnId } = taskAttributes;
+    mapTaskToIxn(context, TaskSid, ixnId);
+    const ixnDataItem = await getSyncMapItem(context, ixnId);
+    const { data } = ixnDataItem;
+    const newData = {
+      ...data,
+      taskSid: TaskSid, reservationSid: ReservationSid, taskStatus: 'reserved', workerSid: WorkerSid
+    };
+
+    await updateSyncMapItem(context, ixnId, { data: newData });
+    const { ixnValues, customer } = newData;
+    const { fullName: custName } = customer;
+    addTaskValuesFromSync(context, custName, ixnValues);
+    addDimValuesFromReservation(context, custName, TaskAge, WorkerAttributes);
+    console.log('newData:', newData);
+    return newData;
+  }
 
   // the /agentAnswered endpoint is called by the webhook configured on the agent phone
   // the phone number is defined in domain.center.agentsPhone
@@ -126,9 +130,7 @@ async function init() {
       const { fullName: custName } = customer;
       const worker = getWorker(context, workerSid);
       const { friendlyName } = worker;
-      const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: custName };
-      const wrapTimeDim = getSingleDimInstance('wrapTime', dimInstances);
-      const wrapTime = getDimValue(dimValues, valuesDescriptor.id, wrapTimeDim);
+      const wrapTime = getDimInstanceValue(dimInstances, dimValues, 'wrapTime', custName);
       scheduleCompleteTask(context, taskSid, custName, friendlyName, (talkTime + wrapTime));
     }
     else {
@@ -207,6 +209,7 @@ const notifyCustsim = async (ctx, taskAndCall) => {
 };
 
 const doWrapupTask = (context, TaskSid, custName, friendlyName, wrapTime) => {
+  log(`${friendlyName} wrapping task ${formatSid(TaskSid)}`);
   wrapupTask(context, TaskSid);
   scheduleCompleteTask(context, TaskSid, custName, friendlyName, wrapTime)
 };
@@ -266,7 +269,8 @@ const addTaskValuesFromSync = (context, name, ixnValues) => {
   context.dimValues.tasks[name] = ixnValues;
 };
 
-const addDimValuesFromReservation = (context, name, TaskAge, workerAttributes) => {
+const addDimValuesFromReservation = (context, name, TaskAge, WorkerAttributes) => {
+  const workerAttributes = JSON.parse(WorkerAttributes);
   context.dimValues.tasks[name].waitTime = TaskAge;
   context.dimValues.workers[workerAttributes.full_name] = workerAttributes;
 };

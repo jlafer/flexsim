@@ -1,5 +1,20 @@
 const R = require('ramda');
 
+/*
+    Data
+      { key: [ixnId],
+        data: {
+          taskStatus: ['initiated', 'reserved'],
+          taskSid,
+          ixnValues: dimValues,
+          attributes: [subset of dimValues that are task attributes],
+          customer,
+          workerSid,
+        },
+        itemTtl: 240
+      }
+*/
+
 function createSyncMap(client, svcSid, name) {
   return client.sync.v1.services(svcSid)
     .syncMaps
@@ -55,9 +70,10 @@ function getSyncMapItem(context, key) {
     .fetch()
 }
 
-function updateSyncMapItem(client, svcSid, syncMapSid, key, data) {
-  return client.sync.v1.services(svcSid)
-    .syncMaps(syncMapSid)
+function updateSyncMapItem(context, key, data) {
+  const { args, client, syncMap } = context;
+  return client.sync.v1.services(args.syncSvcSid)
+    .syncMaps(syncMap.sid)
     .syncMapItems(key)
     .update(data)
 }

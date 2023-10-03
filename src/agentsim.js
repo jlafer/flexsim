@@ -121,7 +121,7 @@ async function init() {
       const { metadata, speech } = cfg;
       const talkTime = addSpeechToTwiml(
         twiml,
-        { speech: speech.agent, isCenter: true, voice: metadata.center.agentVoice, pauseBetween: 2 }
+        { speech: speech.agent, isCenter: true, voice: metadata.center.agentVoice, pauseBetween: 3 }
       );
       const ixnId = parseInt(Digits);
       const ixnDataItem = await getSyncMapItem(context, ixnId);

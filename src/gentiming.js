@@ -28,21 +28,13 @@ async function genAudioTiming(cfg, speech) {
 }
 
 async function getPartyTiming(textList, centerVoice, custVoice) {
-  log(`==getPartyTiming for ${centerVoice} and ${custVoice}==`);
+  log(`getPartyTiming for ${centerVoice} and ${custVoice}`);
   const data = [];
-  let elapsedCalculated = 0;
-  let elapsedUsed = 0;
   for (let i = 0; i < textList.length; i++) {
     const text = textList[i];
     const voice = (i % 2 === 0) ? centerVoice : custVoice;
-    const durCalculated = await getTimingForResponse(text, voice);
-    elapsedCalculated += durCalculated;
-    log(`  elapsedCalculated = ${elapsedCalculated}`);
-    const usedSecs = Math.round((elapsedCalculated - elapsedUsed) / 1000);
-    log(`  usedSecs = ${usedSecs}`);
-    elapsedUsed += (usedSecs * 1000);
-    log(`  elapsedUsed = ${elapsedUsed}`);
-    data.push(`${usedSecs}-${text}`);
+    const durationMsec = await getTimingForResponse(text, voice);
+    data.push(`${durationMsec}-${text}`);
   }
   return data;
 }
@@ -68,7 +60,8 @@ async function getTimingForResponse(speech, voice) {
   const json = linesArr[linesArr.length - 2];
 
   const speechData = JSON.parse(json);
-  log('duration (mSec):', speechData.time);
+  const adjustmentForPersona = (['Ivy', 'Kimberly'].includes(persona)) ? -500 : 0;
+  log('duration (mSec):', speechData.time + adjustmentForPersona);
   return speechData.time;
 }
 

@@ -45,7 +45,7 @@ async function init() {
     const { metadata, speech } = cfg;
     addSpeechToTwiml(
       twiml,
-      { speech: speech.ivr, isCenter: false, voice: metadata.customers.voice, pauseBetween: 2 }
+      { speech: speech.ivr, isCenter: false, voice: metadata.customers.voice, pauseBetween: 3 }
     );
     // add a gather to wait for agent to respond
     addGatherDigitsToTwiml(twiml, args.custsimHost);
@@ -67,7 +67,7 @@ async function init() {
       const { metadata, speech } = cfg;
       addSpeechToTwiml(
         twiml,
-        { speech: speech.agent, isCenter: false, voice: metadata.customers.voice, pauseBetween: 2 }
+        { speech: speech.agent, isCenter: false, voice: metadata.customers.voice, pauseBetween: 3 }
       );
     }
     else {

@@ -22,6 +22,7 @@ run();
 
 async function readDomainData(args) {
   const { domaindir, locale } = args;
+
   const defaults = await readJsonFile(`localization/${locale}.json`);
   let domain;
   if (!!domaindir)
@@ -30,11 +31,12 @@ async function readDomainData(args) {
 }
 
 function getArgs() {
+  const { RANDOM_SEED } = process.env;
+
   const args = parseAndValidateArgs({
     aliases: { d: 'domaindir', c: 'cfgdir', l: 'locale', s: 'seed' },
     required: []
   });
-  const { RANDOM_SEED } = process.env;
   args.locale = args.locale || 'en-us';
   args.seed = args.seed || RANDOM_SEED;
   logArgs(args);

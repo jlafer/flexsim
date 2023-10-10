@@ -21,7 +21,6 @@ async function init() {
   log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
-
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -30,6 +29,7 @@ async function init() {
 
   app.post('/makeCustomerCall', async (req, res) => {
     const { ixnId } = req.body;
+
     const callSid = await makeCallToCenter(context, ixnId);
     mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr' });
     res.send({ callSid });
@@ -41,6 +41,7 @@ async function init() {
   app.post('/callConnected', async (req, res) => {
     const { args, cfg } = context;
     log(`customer call connected to the IVR`);
+
     const twiml = new VoiceResponse();
     const { metadata, speech } = cfg;
     addSpeechToTwiml(
@@ -59,6 +60,7 @@ async function init() {
     const { args, cfg } = context;
     const { CallSid, Digits } = req.body;
     log(`/digitsGathered called for call ${formatSid(CallSid)}`);
+
     const twiml = new VoiceResponse();
     if (Digits) {
       log(`  customer got the go-ahead digit from agentsim: ${Digits}`);
@@ -89,15 +91,10 @@ async function init() {
 
     // get customer-out call SID, needed for hanging up call
     const { callSid } = ixnToCall(context, ixnId);
-
-    if (!!callSid) {
-      setTimeout(abandonCallIfRouting, ixnValues.abandonTime * 1000,
-        context, ixnId, callSid
-      );
-    }
-    else {
+    if (!!callSid)
+      setTimeout(abandonCallIfRouting, ixnValues.abandonTime * 1000, context, ixnId, callSid);
+    else
       log(`callSid not found for ixnId = ${ixnId}??? no abandon timeout set`, null, 'warn');
-    }
     res.status(200).send({});
   });
 
@@ -105,8 +102,8 @@ async function init() {
   //   when the agent joins the conference
 
   app.post('/agentJoined', async (req, res) => {
-    //log(`received notify of agent joining call:`, req.body);
     const { ixnId } = req.body;
+
     setOtherParty(context, ixnId, 'agent');
     res.status(200).send({});
   });
@@ -116,8 +113,8 @@ async function init() {
   app.post('/callStatus', async (req, res) => {
     const summary = R.pick(['CallSid', 'CallStatus', 'CallDuration'], req.body);
     log(`callStatus called:`, summary);
-    const { CallSid } = req.body;
-    unmapCallToIxn(context, CallSid);
+
+    unmapCallToIxn(context, summary.CallSid);
     res.status(200).send({});
   });
 
@@ -129,13 +126,13 @@ async function init() {
 init();
 
 async function makeCallToCenter(context, ixnId) {
-  log(`making call to center`);
   const { client, args, cfg } = context;
   const { metadata } = cfg;
   const { customers } = metadata;
+  log(`making call to center`);
+
   const to = getAddress(context, 'voice');
   const sendDigits = `wwwww${ixnId}#`;
-
   const callSid = await makeCall({
     client,
     from: customers.customersPhone,
@@ -150,6 +147,7 @@ async function makeCallToCenter(context, ixnId) {
 
 async function abandonCallIfRouting(context, ixnId, callSid) {
   const { client } = context;
+
   const ixnDataItem = await getSyncMapItem(context, ixnId);
   if (ixnDataItem.data.taskStatus === 'initiated') {
     log(`abandoning call ${callSid}`);
@@ -159,6 +157,7 @@ async function abandonCallIfRouting(context, ixnId, callSid) {
 
 async function loadTwilioResources(context) {
   const { args, client } = context;
+
   context.workflow = await fetchWorkflow(context);
   context.channels = await fetchTaskChannels(context);
   context.syncMap = await getOrCreateSyncMap(client, args.syncSvcSid, 'calls');
@@ -202,6 +201,7 @@ const callToIxn = (ctx, callSid) => {
 
 const getAddress = (ctx, channelName) => {
   const { dimInstances } = ctx;
+
   const channelDimInstance = getSingleDimInstance('channel', dimInstances);
   const channelAddress = getDimValueParam('address', channelName, channelDimInstance);
   return channelAddress;
@@ -228,6 +228,7 @@ function getArgs() {
 
 async function readConfiguration(args) {
   const { cfgdir } = args;
+
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   const speech = await readJsonFile(`${cfgdir}/speechData.json`);
   const workflow = await readJsonFile(`${cfgdir}/workflow.json`);

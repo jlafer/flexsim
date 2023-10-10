@@ -24,6 +24,7 @@ async function run() {
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
   const arrivalDimAndInst = getSingleDimInstance('arrivalGap', dimInstances);
   const channelDimAndInst = getSingleDimInstance('channel', dimInstances);
+
   let now = Date.now();
   while (now < context.simStopTS) {
     const customer = getFakeCustomer(args.locale, cfg.metadata.customers);
@@ -72,7 +73,10 @@ const getFakeCustomer = (locale, customers) => {
   const fakerModule = localeToFakerModule(locale);
 
   const customer = {};
-  customer.fullName = fakerModule.person.fullName();
+  //customer.fullName = fakerModule.person.fullName();
+  customer.firstName = fakerModule.person.firstName();
+  customer.lastName = fakerModule.person.lastName();
+  customer.fullName = `${customer.firstName} ${customer.lastName}`;
   customer.country = country;
   customer.phone = makePhoneNumber(fakerModule, locale, phoneFormat);
   customer.state = fakerModule.location.state({ abbreviated: true });
@@ -90,6 +94,7 @@ const makePhoneNumber = (fakerModule, locale, phoneFormat) => {
 
 async function loadTwilioResources(context) {
   const { args, client } = context;
+
   context.workflow = await fetchWorkflow(context);
   context.channels = await fetchTaskChannels(context);
   context.syncMap = await getOrCreateSyncMap(client, args.syncSvcSid, 'calls');
@@ -122,6 +127,7 @@ function getArgs() {
 
 async function readConfiguration(args) {
   const { cfgdir } = args;
+
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   const workflow = await readJsonFile(`${cfgdir}/workflow.json`);
   return { metadata, workflow };

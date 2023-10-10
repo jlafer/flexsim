@@ -1,6 +1,6 @@
 {
   "brand": "ACME",
-  "agentCnt": 4,
+  "agentCnt": 30,
   "queueFilterDim": "topic",
   "customers": {
     "country": "US",
@@ -24,8 +24,8 @@
     "arrivalGap": {
       "dataType": "number",
       "expr": "range",
-      "min": 3,
-      "max": 5,
+      "min": 1,
+      "max": 3,
       "instances": [
         {
           "entity": "tasks",
@@ -128,17 +128,17 @@
           "valueParams": [
             {
               "address": "+16292091380",
-              "portion": 0.5,
+              "portion": 0.05,
               "baseCapacity": 1
             },
             {
               "address": "acme.com",
-              "portion": 0.3,
+              "portion": 0.5,
               "baseCapacity": 2
             },
             {
               "address": "+16292091380",
-              "portion": 0.2,
+              "portion": 0.45,
               "baseCapacity": 2
             }
           ]

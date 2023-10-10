@@ -21,6 +21,7 @@ async function genAudioTiming(cfg, speech) {
   const { metadata } = cfg;
   const { center, customers } = metadata;
   const { agent, ivr } = speech;
+
   const ivrTiming = await getPartyTiming(ivr, center.ivrVoice, customers.voice);
   const agtTiming = await getPartyTiming(agent, center.agentVoice, customers.voice);
   const data = { ivr: ivrTiming, agent: agtTiming };
@@ -29,6 +30,7 @@ async function genAudioTiming(cfg, speech) {
 
 async function getPartyTiming(textList, centerVoice, custVoice) {
   log(`getPartyTiming for ${centerVoice} and ${custVoice}`);
+
   const data = [];
   for (let i = 0; i < textList.length; i++) {
     const text = textList[i];
@@ -60,13 +62,14 @@ async function getTimingForResponse(speech, voice) {
   const json = linesArr[linesArr.length - 2];
 
   const speechData = JSON.parse(json);
-  const adjustmentForPersona = (['Ivy', 'Kimberly'].includes(persona)) ? -500 : 0;
-  log('duration (mSec):', speechData.time + adjustmentForPersona);
+  //const adjustmentForPersona = (['Ivy', 'Kimberly'].includes(persona)) ? -500 : 0;
+  log('duration (mSec):', speechData.time);
   return speechData.time;
 }
 
 async function readSpeechData(args) {
   const { domaindir, locale } = args;
+
   let speech;
   if (!!domaindir)
     speech = await readJsonFile(`${domaindir}/speech.json`);
@@ -87,6 +90,7 @@ function getArgs() {
 
 async function readConfiguration(args) {
   const { cfgdir } = args;
+
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   return { metadata };
 }

@@ -5,7 +5,7 @@ const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
   calcActivityChange, calcDimsValues, findObjInList, formatSid,
-  getDimInstanceValue, readJsonFile
+  getDimensionValue, readJsonFile
 } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
@@ -40,7 +40,7 @@ async function init() {
   // for other channels, it accepts the reservation
 
   app.post('/reservation', async (req, res) => {
-    const { dimValues, dimInstances } = context;
+    const { dimValues } = context;
 
     const ixnData = await updateIxnDataFromReservation(context, req.body);
     const { workerSid, taskSid, reservationSid, customer } = ixnData;
@@ -48,9 +48,9 @@ async function init() {
     log(`${worker.friendlyName} reserved for task ${formatSid(taskSid)}`);
     const valuesDescriptor = { entity: 'tasks', phase: 'assign', id: customer.fullName };
     calcDimsValues(context, valuesDescriptor);
-    const talkTime = getDimInstanceValue(dimInstances, dimValues, 'talkTime', valuesDescriptor.id);
-    const wrapTime = getDimInstanceValue(dimInstances, dimValues, 'wrapTime', valuesDescriptor.id);
-    const channelName = getDimInstanceValue(dimInstances, dimValues, 'channel', valuesDescriptor.id);
+    const talkTime = getDimensionValue(context, 'talkTime', valuesDescriptor.id);
+    const wrapTime = getDimensionValue(context, 'wrapTime', valuesDescriptor.id);
+    const channelName = getDimensionValue(context, 'channel', valuesDescriptor.id);
     if (channelName === 'voice') {
       const reservation = await startConference(context, taskSid, reservationSid);
       res.status(200).send({});
@@ -112,7 +112,7 @@ async function init() {
   });
 
   app.post('/digitsGathered', async (req, res) => {
-    const { args, cfg, dimValues, dimInstances } = context;
+    const { args, cfg } = context;
     const { CallSid, Digits } = req.body;
     log(`/digitsGathered called for call ${formatSid(CallSid)}`);
     const twiml = new VoiceResponse();
@@ -130,7 +130,7 @@ async function init() {
       const { fullName: custName } = customer;
       const worker = getWorker(context, workerSid);
       const { friendlyName } = worker;
-      const wrapTime = getDimInstanceValue(dimInstances, dimValues, 'wrapTime', custName);
+      const wrapTime = getDimensionValue(context, 'wrapTime', custName);
       scheduleCompleteTask(context, taskSid, custName, friendlyName, (talkTime + wrapTime));
     }
     else {

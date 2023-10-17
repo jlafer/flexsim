@@ -156,11 +156,11 @@ The optional command-line options include:
 NOTE: if you receive an error message saying that the Workflow could not be found, this probably means your configuration has changed significantly since deployment (or nothing has been deployed). You can always manually delete old simulation resources via the Twilio Console.
 
 ## Terminology
-Due to the depth of the domain object structure, this documentation refers to the following semantic elements of a domain description:
+Due to the complexity of the domain object structure, this documentation refers to the following semantic elements of a domain description:
 - "properties" are the highest level properties of the domain object.
-- "dimensions" are the properties of the `dimensions` property. They contain all of the standard and custom data dimensions that describe the contact center being simulated.
-- "dimension values" are the possible values of the dimensions and are stored in the `values` property of each dimension object.
-- "value parameters" are used in or alongside the randomized generation of dimension values. These are stored within an instance of the dimension, in the `valueParams` property.
+- "dimensions" are the properties under the `dimensions` key. They contain all of the standard and custom data dimensions that describe the contact center being simulated.
+- "dimension options" are the possible values of the enumerated dimensions and are stored in the `options` property of each dimension object.
+- "option parameters" are used in the randomized generation of dimension values. These are stored in the `optionParams` property.
 
 ## Domain Schema
 The localization files and optional `domain.json` file must adhere to the same specific JSON schema.
@@ -250,6 +250,29 @@ Each dimension must adhere to a strict schema. Many of the dimension properties 
 
 The key of each dimension is treated as its name. The name becomes relevant when the value is saved as a worker or task attribute, or when referenced in the formula for calculating another dimension value (see `influences` below).
 
+#### entity
+This specifies the data entity that provides the logical cardinality (or location) of the dimension. Valid values are: `tasks` and `workers`.
+The default value is `tasks`.
+
+#### phase
+This specifies the lifecycle phase (or event) when the value for the dimension is generated. Valid values are: `deploy`, `activity`, `arrive`, `assign` and `complete`.
+The default value is `arrive` for tasks and `deploy` for workers.
+
+#### parent
+This optional property specifies the parent of the dimension. It's only valid for dimensions with an `enum` expression. If specified, option parameters are constrained to a subset of values for each option parameter of the parent dimension. This supports a hierarchy of dimensional values, such as team names within each department and cutomer intents within each topic.
+
+#### valueCnt
+This is an integer and specifies the number of values to generate for the dimension. Valid values are: 1 or more. If the value is greater than one, the values are stored in an array.
+The default value is `1`.
+
+#### isAttribute
+This is a boolean and indicates whether the dimension value should be written as an attribute for its entity. Valid values are: `true` and `false`. A value of `false` can be useful for generating numeric values that will not be written as an attribute but which can be used to influence other dimension values.
+The default value is `true`.
+
+#### attrName
+This allows task and worker attribute names to be different than the dimension name, when instantiated in instances of the entity. Attribute names with periods represent paths. So, for example, if a worker dimension has `isAttribute` set to true, an attrName of "routing.skills" will result in a Worker attribute that might look like `"routing": {"skills": ["Support"]}`.
+The default value is the name of the dimension.
+
 #### dataType
 This specifies the data type of the dimension. Valid values are: `string`, `number`, `integer` and `boolean`.
 The default value is `string`.
@@ -258,9 +281,23 @@ The default value is `string`.
 This specifies the expression of the values. Valid values are: `enum` and `range`.
 The default value is `enum`.
 
-#### values
-This is an array and specifies the possible values for the dimension. It only applies to an `enum` expression dimension.
-There are no default values.
+#### options
+This is an object and specifies the possible values for the dimension. It only applies to an `enum` expression dimension.
+There are no default values. For a dimension without a parent, it should have a single array property `all`, which is a list of string valuess. For a dimension with a parent, it should have an array property for every option of its parent dimension.
+
+#### optionParams
+This is an object and specifies additional parameters used for the generation of the dimension's values. It only applies to `enum` expression dimensions. For a dimension without a parent, it should have a single array property `all`. For a dimension with a parent, it should have an array property for every option of its parent dimension. Each object in these arrays have a single required key: `portion`, which indicates the target incidence of the corresponding optiin being generated for the dimension at runtime.
+If omitted, the simulation will generate all of the corresponding option values in the dimension with a fairly even distribution. For example, if three values are specified in the dimension's enumeration, each value will occur roughly one third of the time.
+
+Specific standard dimensions expect additional keys in the `optionParams` objects.
+- The `channel` dimension expects a `baseCapacity` key whose integer value specifies the default capacity of Workers for the corresponding channel value.
+- The `activity` dimension expects two keys:
+  - the `address` key specifies the external address used by customers to contact the brand on that channel
+  - the `baseDur` key whose integer value specifies the default duration that Workers spend in the corresponding activity
+
+#### curve
+This specifies the shape of the value distribution curve for the dimension. Valid values are: `uniform` and `bell`.
+The default value is `uniform` for enumerated values and `bell` for range values. A bell-shaped distribution can be further described by `influences`. Additional control over bell curves (e.g., standard deviation, skew) may be added in the future, depending on the level of interest.
 
 #### min
 This specifies the minimum value for the dimension. It only applies to a `range` expression dimension.
@@ -270,67 +307,32 @@ The default value is 0.
 This specifies the maximum value for the dimension. It only applies to a `range` expression dimension.
 The default value is 1.
 
-#### instances
-All of the dimension parameters above describe the conceptual "value domain" of a dimension. The `instances` parameter is used to define how that dimension is actually generated and used in the simulation. This parameter is a JSON array because there must be at least one instance of each dimension but there can be more than one. For example, the `topic` dimension might be instantiated as both a Worker atttribute and as a Task atttribute. The following parameters are included in each instance, which is a JSON object.
-
-#### entity
-This specifies the data entity that provides the location for the instance of the dimension. Valid values are: `tasks` and `workers`.
-The default value is `tasks`.
-
-#### phase
-This specifies the lifecycle phase (or event) when the value for the dimension instance is generated. Valid values are: `deploy`, `activity`, `arrive`, `assign` and `complete`.
-The default value is `arrive` for tasks and `deploy` for workers.
-
-#### instName
-This allows the instance name to be different than the dimension name, when instantiated in the entity.
-The default value is the name of the dimension.
-
-#### isAttribute
-This is a boolean and indicates whether the dimension instance should be written as an attribute for its entity. Valid values are: `true` and `false`. A value of `false` can be useful for generating numeric values that will not be written as an attribute but which can be used to influence other dimension instance values.
-The default value is `true`.
-
-#### curve
-This specifies the . Valid values are: `uniform` and `bell`.
-The default value is `uniform` for enumerated values and `bell` for range values.
-
-#### valueCnt
-This is an integer and specifies the number of values to generate for the dimension instance. Valid values are: 1 or more. If the value is not one, the values are stored in an array.
-The default value is `1`.
-
-#### valueParams
-This is an array of objects and specifies additional parameters used for the generation of the dimension's values. It only applies to `enum` dimensions. If specified, there must be one member of this array for each member of the `values` array in the parent dimension. Each object in the array has a single required key: `portion`, which indicates the target incidence of the corresponding value being generated for the dimension instance at runtime.
-If omitted, the simulation will evenly generate all of the values in the dimension's `values` array. For example, if three values are specified in the dimension's enumeration, each value will occur roughly one third of the time.
-
-Specific standard dimensions expect additional keys in the `valueParams` objects.
-- The `channel` dimension's instance expects a `baseCapacity` key whose integer value specifies the default capacity of Workers for the corresponding channel value.
-- The `activity` dimension's instance expects two keys:
-  - the `baseDur` key whose integer value specifies the default duration that Workers spend in the corresponding activity
-  - the `address` key specifies the external address used by customers to contact the brand on that channel
-
 #### influences
 This is an array of objects and specifies how other dimensions influence the value generated for this one. Each object in the array must contain the following keys: `factor`, `effect` and `amount`.
-- `factor` specifies the influencing dimension instance. It must refer to the instance of a `range` dimension that is calculated in the same or a previous `phase`. For example, a dimension instance that is generated during task completion can be influenced by factors generated in the `deploy`, `arrive`, `assign` or `complete` phases. However, a dimension instance in the `assign` phase cannot be influenced by a factor that is not generated until the `complete` phase. Also, a dimension instance in the `task` entity can be influenced by factors in either the `worker` or `task` entities. This parameter has the format `<dim name>.<instance name>`. It can reference another custom dimension instance or any of the following standard ones: `waitTime.waitTime`, `talkTime.talkTime`, `wrapTime.wrapTime`. Finally, if influencing an `enum` dimension instance, treat its `min` and `max` values as 0 and 1 when specifying the amount of shifting.
+- `factor` specifies the influencing dimension. It must refer to the `range` dimension that is calculated in the same or a previous `phase`. For example, a dimension that is generated during task completion can be influenced by factors generated in the `deploy`, `arrive`, `assign` or `complete` phases. However, a dimension in the `assign` phase cannot be influenced by a factor that is not generated until the `complete` phase. Also, a dimension in the `task` entity can be influenced by factors in either the `worker` or `task` entities. This parameter contains the influencing dimension name. It can reference another custom dimension or any of the following standard ones: `waitTime`, `talkTime` or `wrapTime`. Finally, if influencing an `enum` dimension, treat its `min` and `max` values as 0 and 1 when specifying the amount of shifting.
 - `effect` specifies the type of influence; the only valid value currently is `shift`
 - `amount` specifes the weight of the influence and is expressed as a fraction of the factor's value difference from its target mean
 
-Influences are best understood with an example. Let's say a custom `csat` dimension instance should be influenced by the task `talkTime` factor. The CSAT varies between 1 and 5 with a mean of 3, whereas talk time varies between 0 and 100 secs with a mean of 50. And for a particular task, the actual talk time is 25 secs and the pre-influences CSAT value is 2.
+Influences are best understood with an example. Let's say a custom `csat` dimension should be influenced by the task `talkTime` factor. The CSAT varies between 1 and 5 with a mean of 3, whereas talk time varies between 0 and 100 secs with a mean of 50. And for a particular task, the actual talk time is 25 secs and the pre-influences CSAT value is 2.
 
-Now assume the following `influences` configuration for the `csat` dimension instance:
+Now assume the following `influences` configuration for the `csat` dimension:
 ```
 [{
-  "factor": "talkTime.talkTime",
+  "factor": "talkTime",
   "effect": "shift",
   "amount": -0.05
 }]
 ```
 The calculation process for the final `csat` value would flow like this:
 - A `talkTime` value of 25 is 25 less (i.e., -25) than the expected mean of 50.
-- Multiplied by the influence `amount` of -0.05 results in a shift of `csat` by +1.25.
-- The pre-influences `csat` value of 2 is now shifted to 3.25 and rounded to the integer value of 3.
+- Multiplied by the influence `amount` of -0.05 results in a shift of `csat` by +1.25 (-25 * -0.05).
+- A raw `csat` value of 2 is now shifted to 3.25 and rounded to the integer value of 3.
 
 ## Using flexsim in a Demo
 When using `flexsim` in a demo, here are some tips:
 - All simulated agents start out in an Available state and it takes awhile for the random nature of the simulation to place agents in a mixture of activities that is both realistic and in line with the configured value-percentages. Thus, start `agentsim` at least 10 minutes before your demo.
+- Following a demo, stop all of the flexsim processes. Then, run the `cleansim` script to put all simulated workers in the `Offline` state. This will stop the active-hour billing for those agents and will help preserve the credit balance in your Twilio project.
+- If you configure the simulation to make real phone calls, try to limit their volume by adjusting the `portion` for the voice channel, since they consume a lot of resources compared to the "virtual" tasks.
 
 ## Known Limitations
 - The project has not yet reached a "1.0" status and there will be breaking changes from time to time.
@@ -354,8 +356,8 @@ When using `flexsim` in a demo, here are some tips:
 - Bug fixes:
   - Task attributes set during task arrival are no longer overwritten at task completion.
 ### 0.0.3
-- If the `valueParams` property for an instance of a dimension is omitted from your `domain.json` file, the `genconfig` script will evenly generate all of the values in the dimension's `values` array.
-- The capacity of all workers for each channel can be specified in the domain file, using the `baseCapacity` property for each value in the `channel` dimension's (only) instance.
+- If the `optionParams` property for a dimension is omitted from your `domain.json` file, the `genconfig` script will evenly generate all of the values in the dimension's `values` array.
+- The capacity of all workers for each channel can be specified in the domain file, using the `baseCapacity` property for each value in the `channel` dimension.
 - All configuration and randomization logic has moved to a separate library package, [flexsim-lib](https://www.npmjs.com/package/flexsim-lib), so that it can be shared with the configuration UI (coming soon). The library code can be found at [jlafer/flexsim-lib](https://github.com/jlafer/flexsim-lib).
 ### 0.0.4
 - The terminology of the domain schema object properties was changed and clarified for better clarity. That is reflected in this document and the domain files.
@@ -365,3 +367,11 @@ When using `flexsim` in a demo, here are some tips:
   - New dimensions have been added: `center` and `customer`.
   - The `channel` dimension has been given a new value parameter property, `address`, which gives the phone number or "to" address that customers use to contact the center on that channel.
 - The simulation now generates most of the standard task attributes expected by Flex Insights, so that individual conversations have realistic metadata.
+### 0.0.5
+- The concept of dimension instances has been removed, which greatly simplifies the configuration and the code. Sorry for the confusion and churn! This may result in occasional redundancy when defining related dimensions (e.g., `topic` and `skill`) both having the same values and perhaps other properties. However, the few times when this occurs didn't seem to justify the added complexity.
+- The following additions and changes have been made to the domain schema:
+  - The `instances` property of dimensions has been removed. All dimension-instance properties have moved to the dimension.
+  - Dimension objects now have a new optional property named `parent`. This allows parent-child dimensions, where the values (`options`) of the child are restricted to a subset of its parent's values.
+  - Dimension objects now have a new optional property named `attrName`. This allows a dimension that gets saved as a worker or task attribute to be saved with a different name, which can be a period-delimited path name (e.g., routing.skills).
+  - The `values` property has been renamed to `options`. Furthermore, it is now an object and not an array. See the description above for details.
+  - The `valueParams` property has been renamed to `optionParams`. It is also now an object and not an array. See the description above for details.

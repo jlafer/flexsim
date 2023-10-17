@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
 const {
-  getDimValueParam, getSingleDimInstance, readJsonFile, formatSid
+  getDimOptionParam, getDimension, readJsonFile, formatSid
 } = require('flexsim-lib');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
@@ -200,10 +200,8 @@ const callToIxn = (ctx, callSid) => {
 };
 
 const getAddress = (ctx, channelName) => {
-  const { dimInstances } = ctx;
-
-  const channelDimInstance = getSingleDimInstance('channel', dimInstances);
-  const channelAddress = getDimValueParam('address', channelName, channelDimInstance);
+  const dimension = getDimension('channel', ctx);
+  const channelAddress = getDimOptionParam('address', 'all', channelName, dimension);
   return channelAddress;
 };
 

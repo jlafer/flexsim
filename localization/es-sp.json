@@ -1,247 +1,309 @@
-      {
-        "brand": "Industrias del Bùho",
-        "agentCnt": 20,
-        "center": {
-          "country": "SP",
-          "state": "CAT",
-          "city": "Barcelona",
-          "zip": "54-3210"
-        },
-        "customers": {
-          "country": "SP",
-          "phoneFormat": "+34###########"
-        },
-        "queueFilterDim": "topic",
-        "queueWorkerDims": [
-          "routing.skills"
-        ],
-        "dimensions": {
-          "arrivalGap": {
-            "dataType": "number",
-            "expr": "range",
-            "min": 3,
-            "max": 5,
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "arrive",
-                "isAttribute": false,
-                "curve": "uniform"
-              }
-            ]
+{
+  "brand": "Industrias del Bùho",
+  "agentCnt": 20,
+  "center": {
+    "country": "SP",
+    "state": "CAT",
+    "city": "Barcelona",
+    "zip": "54-3210",
+    "ivrVoice": "Polly.Joanna",
+    "agentVoice": "Polly.Matthew"
+  },
+  "customers": {
+    "country": "SP",
+    "phoneFormat": "+34###########",
+    "voice": "Polly.Kendra"
+  },
+  "queueFilterDim": "topic",
+  "queueWorkerDims": [
+    "skill"
+  ],
+  "dimensions": {
+    "arrivalGap": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
+      "dataType": "number",
+      "expr": "range",
+      "min": 3,
+      "max": 5,
+      "curve": "uniform"
+    },
+    "abandonTime": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
+      "dataType": "number",
+      "expr": "range",
+      "min": 15,
+      "max": 60,
+      "curve": "uniform"
+    },
+    "waitTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
+      "dataType": "number",
+      "expr": "range"
+    },
+    "talkTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
+      "dataType": "number",
+      "expr": "range",
+      "min": 15,
+      "max": 45,
+      "curve": "bell"
+    },
+    "wrapTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
+      "dataType": "number",
+      "expr": "range",
+      "min": 5,
+      "max": 25,
+      "curve": "bell"
+    },
+    "channel": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
+      "expr": "enum",
+      "options": {
+        "all": [
+          "voice",
+          "chat",
+          "sms"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "address": "+34-93-1234-56789",
+            "portion": 0.34,
+            "baseCapacity": 1
           },
-          "abandonTime": {
-            "dataType": "number",
-            "expr": "range",
-            "min": 15,
-            "max": 60,
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "arrive",
-                "isAttribute": false,
-                "curve": "uniform"
-              }
-            ]
+          {
+            "address": "IndustriasBuho.sp",
+            "portion": 0.33,
+            "baseCapacity": 1
           },
-          "waitTime": {
-            "dataType": "number",
-            "expr": "range",
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "assign",
-                "isAttribute": false
-              }
-            ]
-          },
-          "talkTime": {
-            "dataType": "number",
-            "expr": "range",
-            "min": 15,
-            "max": 45,
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "assign",
-                "isAttribute": false,
-                "curve": "bell"
-              }
-            ]
-          },
-          "wrapTime": {
-            "dataType": "number",
-            "expr": "range",
-            "min": 5,
-            "max": 25,
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "assign",
-                "isAttribute": false,
-                "curve": "bell"
-              }
-            ]
-          },
-          "channel": {
-            "expr": "enum",
-            "values": [
-              "voice",
-              "chat",
-              "sms"
-            ],
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "arrive",
-                "isAttribute": false,
-                "valueParams": [
-                  {
-                    "address": "+34-93-1234-56789",
-                    "portion": 0.34,
-                    "baseCapacity": 1
-                  },
-                  {
-                    "address": "IndustriasBuho.sp",
-                    "portion": 0.33,
-                    "baseCapacity": 1
-                  },
-                  {
-                    "address": "+34-93-1234-56789",
-                    "portion": 0.33,
-                    "baseCapacity": 1
-                  }
-                ]
-              }
-            ]
-          },
-          "activity": {
-            "expr": "enum",
-            "values": [
-              "Available",
-              "Busy",
-              "Break",
-              "Lunch"
-            ],
-            "instances": [
-              {
-                "entity": "workers",
-                "phase": "activity",
-                "isAttribute": false,
-                "valueParams": [
-                  {
-                    "baseDur": 90,
-                    "portion": 0.50
-                  },
-                  {
-                    "baseDur": 15,
-                    "portion": 0.10
-                  },
-                  {
-                    "baseDur": 30,
-                    "portion": 0.25
-                  },
-                  {
-                    "baseDur": 30,
-                    "portion": 0.15
-                  }
-                ]
-              }
-            ]
-          },
-          "topic": {
-            "expr": "enum",
-            "values": [
-              "Sales",
-              "Service",
-              "Support"
-            ],
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "arrive",
-                "valueParams": [
-                  {
-                    "portion": 0.20
-                  },
-                  {
-                    "portion": 0.30
-                  },
-                  {
-                    "portion": 0.40
-                  }
-                ]
-              },
-              {
-                "entity": "workers",
-                "instName": "routing.skills",
-                "valueCnt": 2,
-                "valueParams": [
-                  {
-                    "portion": 0.20
-                  },
-                  {
-                    "portion": 0.30
-                  },
-                  {
-                    "portion": 0.40
-                  }
-                ]
-              }
-            ]
-          },
-          "intent": {
-            "expr": "enum",
-            "values": [
-              "Check Account Balance",
-              "Check Payment Clearance",
-              "Change Password",
-              "Billing Question",
-              "Refund Request",
-              "Check Delivery Date",
-              "Cancel Order",
-              "Update Order",
-              "Pricing Inquiry",
-              "Product Inquiry"
-            ],
-            "instances": [
-              {
-                "entity": "tasks",
-                "phase": "arrive",
-                "valueParams": [
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  },
-                  {
-                    "portion": 0.10
-                  }
-                ]
-              }
-            ]
+          {
+            "address": "+34-93-1234-56789",
+            "portion": 0.33,
+            "baseCapacity": 1
           }
-        }
+        ]
       }
+    },
+    "activity": {
+      "entity": "workers",
+      "phase": "activity",
+      "isAttribute": false,
+      "expr": "enum",
+      "options": {
+        "all": [
+          "Available",
+          "Busy",
+          "Break",
+          "Lunch"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "baseDur": 90,
+            "portion": 0.50
+          },
+          {
+            "baseDur": 15,
+            "portion": 0.10
+          },
+          {
+            "baseDur": 30,
+            "portion": 0.25
+          },
+          {
+            "baseDur": 30,
+            "portion": 0.15
+          }
+        ]
+      }
+    },
+    "topic": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "expr": "enum",
+      "options": {
+        "all": [
+          "Sales",
+          "Service",
+          "Support"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.30
+          },
+          {
+            "portion": 0.40
+          }
+        ]
+      }
+    },
+    "skill": {
+      "entity": "workers",
+      "phase": "deploy",
+      "expr": "enum",
+      "valueCnt": 2,
+      "options": {
+        "all": [
+          "Sales",
+          "Service",
+          "Support"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.30
+          },
+          {
+            "portion": 0.40
+          }
+        ]
+      }
+    },
+    "intent": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "parent": "topic",
+      "expr": "enum",
+      "options": {
+        "Sales": [
+          "Pricing Inquiry",
+          "Place Order",
+          "Cancel Order",
+          "Update Order"
+        ],
+        "Service": [
+          "Check Account Balance",
+          "Check Payment Clearance",
+          "Change Password",
+          "Billing Question",
+          "Refund Request",
+          "Check Delivery Date"
+        ],
+        "Support": [
+          "Open Trouble Ticket",
+          "Close Trouble Ticket",
+          "Update Trouble Ticket",
+          "Escalate Trouble Ticket"
+        ]
+      },
+      "optionParams": {
+        "Sales": [
+          {
+            "portion": 0.35
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.25
+          },
+          {
+            "portion": 0.20
+          }
+        ],
+        "Service": [
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          }
+        ],
+        "Support": [
+          {
+            "portion": 0.15
+          },
+          {
+            "portion": 0.30
+          },
+          {
+            "portion": 0.25
+          },
+          {
+            "portion": 0.30
+          }
+        ]
+      }
+    },
+    "language": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "expr": "enum",
+      "options": {
+        "all": [
+          "English",
+          "Spanish",
+          "French",
+          "Mandarin",
+          "Italian",
+          "Korean"
+        ]
+      }
+    },
+    "department": {
+      "entity": "workers",
+      "phase": "deploy",
+      "attrName": "department_name",
+      "expr": "enum",
+      "options": {
+        "all": [
+          "Cust Service",
+          "Tech Support"
+        ]
+      }
+    },
+    "team": {
+      "entity": "workers",
+      "parent": "department",
+      "phase": "deploy",
+      "attrName": "team_name",
+      "expr": "enum",
+      "options": {
+        "Cust Service": [
+          "Blue Team",
+          "Gold Team"
+        ],
+        "Tech Support": [
+          "Green Team",
+          "Red Team"
+        ]
+      }
+    }
+  }
+}

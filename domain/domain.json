@@ -18,260 +18,275 @@
     "agentVoice": "Polly.Matthew"
   },
   "queueWorkerDims": [
-    "routing.skills"
+    "skill"
   ],
   "dimensions": {
     "arrivalGap": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 1,
       "max": 3,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "curve": "uniform"
-        }
-      ]
+      "curve": "uniform"
     },
     "abandonTime": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 15,
       "max": 60,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "curve": "uniform"
-        }
-      ]
+      "curve": "uniform"
     },
     "waitTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
       "dataType": "number",
-      "expr": "range",
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "assign",
-          "isAttribute": false
-        }
-      ]
+      "expr": "range"
     },
     "talkTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 15,
       "max": 45,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "assign",
-          "isAttribute": false,
-          "curve": "bell"
-        }
-      ]
+      "curve": "bell"
     },
     "wrapTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 5,
       "max": 25,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "assign",
-          "isAttribute": false,
-          "curve": "bell"
-        }
-      ]
+      "curve": "bell"
     },
     "csat": {
+      "entity": "tasks",
+      "phase": "complete",
       "dataType": "integer",
       "expr": "range",
       "min": 1,
       "max": 10,
-      "instances": [
+      "curve": "bell",
+      "influences": [
         {
-          "entity": "tasks",
-          "phase": "complete",
-          "curve": "bell",
-          "influences": [
-            {
-              "factor": "waitTime.waitTime",
-              "effect": "shift",
-              "amount": "-0.10"
-            },
-            {
-              "factor": "talkTime.talkTime",
-              "effect": "shift",
-              "amount": "-0.05"
-            }
-          ]
+          "factor": "waitTime",
+          "effect": "shift",
+          "amount": "-0.10"
+        },
+        {
+          "factor": "talkTime",
+          "effect": "shift",
+          "amount": "-0.05"
         }
       ]
     },
     "channel": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
       "expr": "enum",
-      "values": [
-        "voice",
-        "chat",
-        "sms"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "valueParams": [
-            {
-              "address": "+16292091380",
-              "portion": 0.05,
-              "baseCapacity": 1
-            },
-            {
-              "address": "acme.com",
-              "portion": 0.5,
-              "baseCapacity": 2
-            },
-            {
-              "address": "+16292091380",
-              "portion": 0.45,
-              "baseCapacity": 2
-            }
-          ]
-        }
-      ]
+      "options": {
+        "all": [
+          "voice",
+          "chat",
+          "sms"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "address": "+16292091380",
+            "portion": 0.05,
+            "baseCapacity": 1
+          },
+          {
+            "address": "acme.com",
+            "portion": 0.5,
+            "baseCapacity": 2
+          },
+          {
+            "address": "+16292091380",
+            "portion": 0.45,
+            "baseCapacity": 2
+          }
+        ]
+      }
     },
     "activity": {
+      "entity": "workers",
+      "phase": "activity",
+      "isAttribute": false,
       "expr": "enum",
-      "values": [
-        "Available",
-        "Busy",
-        "Break",
-        "Lunch"
-      ],
-      "instances": [
-        {
-          "entity": "workers",
-          "phase": "activity",
-          "isAttribute": false,
-          "valueParams": [
-            {
-              "baseDur": 90,
-              "portion": 0.50
-            },
-            {
-              "baseDur": 15,
-              "portion": 0.10
-            },
-            {
-              "baseDur": 30,
-              "portion": 0.25
-            },
-            {
-              "baseDur": 30,
-              "portion": 0.15
-            }
-          ]
-        }
-      ]
+      "options": {
+        "all": [
+          "Available",
+          "Busy",
+          "Break",
+          "Lunch"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "baseDur": 90,
+            "portion": 0.50
+          },
+          {
+            "baseDur": 15,
+            "portion": 0.10
+          },
+          {
+            "baseDur": 30,
+            "portion": 0.25
+          },
+          {
+            "baseDur": 30,
+            "portion": 0.15
+          }
+        ]
+      }
     },
     "topic": {
+      "entity": "tasks",
+      "phase": "arrive",
       "expr": "enum",
-      "values": [
-        "Checking",
-        "CreditCard",
-        "Mortgage",
-        "OtherLoans"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "valueParams": [
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.35
-            },
-            {
-              "portion": 0.25
-            }
-          ]
-        },
-        {
-          "entity": "workers",
-          "instName": "routing.skills",
-          "valueCnt": 2,
-          "valueParams": [
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.35
-            },
-            {
-              "portion": 0.25
-            }
-          ]
-        }
-      ]
+      "options": {
+        "all": [
+          "Checking",
+          "CreditCard",
+          "Mortgage",
+          "OtherLoans"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.35
+          },
+          {
+            "portion": 0.25
+          }
+        ]
+      }
+    },
+    "skill": {
+      "entity": "workers",
+      "phase": "deploy",
+      "attrName": "routing.skills",
+      "expr": "enum",
+      "valueCnt": 2,
+      "options": {
+        "all": [
+          "Checking",
+          "CreditCard",
+          "Mortgage",
+          "OtherLoans"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.35
+          },
+          {
+            "portion": 0.25
+          }
+        ]
+      }
     },
     "intent": {
+      "entity": "tasks",
+      "phase": "arrive",
       "expr": "enum",
-      "values": [
-        "Check account balance",
-        "Check payment clearance",
-        "Change password",
-        "Inquire on rates"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "valueParams": [
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.35
-            },
-            {
-              "portion": 0.25
-            }
-          ]
-        }
-      ]
+      "options": {
+        "all": [
+          "Check account balance",
+          "Check payment clearance",
+          "Change password",
+          "Inquire on rates"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.35
+          },
+          {
+            "portion": 0.25
+          }
+        ]
+      }
     },
     "language": {
+      "entity": "tasks",
+      "phase": "arrive",
       "expr": "enum",
-      "values": [
-        "English",
-        "Spanish",
-        "French",
-        "Mandarin",
-        "Italian",
-        "Korean"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive"
-        }
-      ]
+      "options": {
+        "all": [
+          "English",
+          "Spanish",
+          "French",
+          "Mandarin",
+          "Italian",
+          "Korean"
+        ]
+      }
+    },
+    "department": {
+      "entity": "workers",
+      "phase": "deploy",
+      "attrName": "department_name",
+      "expr": "enum",
+      "options": {
+        "all": [
+          "Cust Service",
+          "Tech Support"
+        ]
+      }
+    },
+    "team": {
+      "entity": "workers",
+      "parent": "department",
+      "phase": "deploy",
+      "attrName": "team_name",
+      "expr": "enum",
+      "options": {
+        "Cust Service": [
+          "Blue Team",
+          "Gold Team"
+        ],
+        "Tech Support": [
+          "Green Team",
+          "Red Team"
+        ]
+      }
     }
   }
 }

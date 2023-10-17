@@ -20,231 +20,246 @@
   ],
   "dimensions": {
     "arrivalGap": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 3,
       "max": 5,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "curve": "uniform"
-        }
-      ]
+      "curve": "uniform"
     },
     "abandonTime": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 15,
       "max": 60,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "curve": "uniform"
-        }
-      ]
+      "curve": "uniform"
     },
     "waitTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
       "dataType": "number",
-      "expr": "range",
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "assign",
-          "isAttribute": false
-        }
-      ]
+      "expr": "range"
     },
     "talkTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 15,
       "max": 45,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "assign",
-          "isAttribute": false,
-          "curve": "bell"
-        }
-      ]
+      "curve": "bell"
     },
     "wrapTime": {
+      "entity": "tasks",
+      "phase": "assign",
+      "isAttribute": false,
       "dataType": "number",
       "expr": "range",
       "min": 5,
       "max": 25,
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "assign",
-          "isAttribute": false,
-          "curve": "bell"
-        }
-      ]
+      "curve": "bell"
     },
     "channel": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "isAttribute": false,
       "expr": "enum",
-      "values": [
-        "voice",
-        "chat",
-        "sms"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "isAttribute": false,
-          "valueParams": [
-            {
-              "address": "+18005551212",
-              "portion": 0.34,
-              "baseCapacity": 1
-            },
-            {
-              "address": "owlindustries.com",
-              "portion": 0.33,
-              "baseCapacity": 1
-            },
-            {
-              "address": "+18005551313",
-              "portion": 0.33,
-              "baseCapacity": 1
-            }
-          ]
-        }
-      ]
+      "options": {
+        "all": [
+          "voice",
+          "chat",
+          "sms"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "address": "+18005551212",
+            "portion": 0.34,
+            "baseCapacity": 1
+          },
+          {
+            "address": "owlindustries.com",
+            "portion": 0.33,
+            "baseCapacity": 1
+          },
+          {
+            "address": "+18005551313",
+            "portion": 0.33,
+            "baseCapacity": 1
+          }
+        ]
+      }
     },
     "activity": {
+      "entity": "workers",
+      "phase": "activity",
+      "isAttribute": false,
       "expr": "enum",
-      "values": [
-        "Available",
-        "Busy",
-        "Break",
-        "Lunch"
-      ],
-      "instances": [
-        {
-          "entity": "workers",
-          "phase": "activity",
-          "isAttribute": false,
-          "valueParams": [
-            {
-              "baseDur": 90,
-              "portion": 0.50
-            },
-            {
-              "baseDur": 15,
-              "portion": 0.10
-            },
-            {
-              "baseDur": 30,
-              "portion": 0.25
-            },
-            {
-              "baseDur": 30,
-              "portion": 0.15
-            }
-          ]
-        }
-      ]
+      "options": {
+        "all": [
+          "Available",
+          "Busy",
+          "Break",
+          "Lunch"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "baseDur": 90,
+            "portion": 0.50
+          },
+          {
+            "baseDur": 15,
+            "portion": 0.10
+          },
+          {
+            "baseDur": 30,
+            "portion": 0.25
+          },
+          {
+            "baseDur": 30,
+            "portion": 0.15
+          }
+        ]
+      }
     },
     "topic": {
+      "entity": "tasks",
+      "phase": "arrive",
       "expr": "enum",
-      "values": [
-        "Sales",
-        "Service",
-        "Support"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "valueParams": [
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.30
-            },
-            {
-              "portion": 0.40
-            }
-          ]
-        },
-        {
-          "entity": "workers",
-          "instName": "routing.skills",
-          "valueCnt": 2,
-          "valueParams": [
-            {
-              "portion": 0.20
-            },
-            {
-              "portion": 0.30
-            },
-            {
-              "portion": 0.40
-            }
-          ]
-        }
-      ]
+      "options": {
+        "all": [
+          "Sales",
+          "Service",
+          "Support"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.30
+          },
+          {
+            "portion": 0.40
+          }
+        ]
+      }
+    },
+    "skill": {
+      "entity": "workers",
+      "phase": "deploy",
+      "expr": "enum",
+      "valueCnt": 2,
+      "options": {
+        "all": [
+          "Sales",
+          "Service",
+          "Support"
+        ]
+      },
+      "optionParams": {
+        "all": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.30
+          },
+          {
+            "portion": 0.40
+          }
+        ]
+      }
     },
     "intent": {
+      "entity": "tasks",
+      "phase": "arrive",
+      "parent": "topic",
       "expr": "enum",
-      "values": [
-        "Check Account Balance",
-        "Check Payment Clearance",
-        "Change Password",
-        "Billing Question",
-        "Refund Request",
-        "Check Delivery Date",
-        "Cancel Order",
-        "Update Order",
-        "Pricing Inquiry",
-        "Product Inquiry"
-      ],
-      "instances": [
-        {
-          "entity": "tasks",
-          "phase": "arrive",
-          "valueParams": [
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            },
-            {
-              "portion": 0.10
-            }
-          ]
-        }
-      ]
+      "options": {
+        "Sales": [
+          "Pricing Inquiry",
+          "Place Order",
+          "Cancel Order",
+          "Update Order"
+        ],
+        "Service": [
+          "Check Account Balance",
+          "Check Payment Clearance",
+          "Change Password",
+          "Billing Question",
+          "Refund Request",
+          "Check Delivery Date"
+        ],
+        "Support": [
+          "Open Trouble Ticket",
+          "Close Trouble Ticket",
+          "Update Trouble Ticket",
+          "Escalate Trouble Ticket"
+        ]
+      },
+      "optionParams": {
+        "Sales": [
+          {
+            "portion": 0.35
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.25
+          },
+          {
+            "portion": 0.20
+          }
+        ],
+        "Service": [
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          }
+        ],
+        "Support": [
+          {
+            "portion": 0.15
+          },
+          {
+            "portion": 0.30
+          },
+          {
+            "portion": 0.25
+          },
+          {
+            "portion": 0.30
+          }
+        ]
+      }
     }
   }
 }

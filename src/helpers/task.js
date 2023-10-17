@@ -1,6 +1,6 @@
 const R = require('ramda');
 const {
-  findObjInList, formatSid, getAttributes, getDimValue, getDimValueParam, getSingleDimInstance, hasAttributeValue
+  findObjInList, formatSid, getAttributes, getDimValue, getDimOptionParam, getDimension, hasAttributeValue
 } = require('flexsim-lib');
 
 const { log } = require('./util');
@@ -27,16 +27,17 @@ const fetchFlexsimTasks = async (ctx) => {
 };
 
 const submitTask = async (ctx, ixnId, customer, valuesDescriptor) => {
-  const { args, cfg, client, workflow, channels, dimInstances, dimValues } = ctx;
+  const { args, cfg, client, workflow, channels, dimValues } = ctx;
   const { acct, wrkspc } = args;
-  const { phone: from, fullName, country, state, city, zip } = customer;
-  const channelDim = getSingleDimInstance('channel', dimInstances);
-  const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDim);
-  const channelAddress = getDimValueParam('address', channelName, channelDim);
-  const taskChannel = findObjInList('uniqueName', channelName, channels);
-  const customAttrs = getAttributes(ctx, valuesDescriptor);
   const { metadata } = cfg;
   const { brand, center } = metadata;
+  const { phone: from, fullName, country, state, city, zip } = customer;
+
+  const channelDim = getDimension('channel', ctx);
+  const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDim);
+  const channelAddress = getDimOptionParam('address', 'all', channelName, channelDim);
+  const taskChannel = findObjInList('uniqueName', channelName, channels);
+  const customAttrs = getAttributes(ctx, valuesDescriptor);
   const task = await client.taskrouter.v1.workspaces(wrkspc).tasks
     .create(
       {
@@ -75,7 +76,7 @@ const submitTask = async (ctx, ixnId, customer, valuesDescriptor) => {
         workflowSid: workflow.sid
       }
     );
-  const abandonTimeDim = getSingleDimInstance('abandonTime', dimInstances);
+  const abandonTimeDim = getDimension('abandonTime', ctx);
   const abandonTime = getDimValue(dimValues, valuesDescriptor.id, abandonTimeDim);
   setTimeout(
     function () {

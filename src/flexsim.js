@@ -1,7 +1,7 @@
 require("dotenv").config();
 const axios = require('axios');
 const {
-  calcDimsValues, formatSid, getAttributes, getDimValue, getDimValues, getSingleDimInstance, localeToFakerModule, readJsonFile
+  calcDimsValues, formatSid, getAttributes, getDimValue, getDimValues, getDimension, localeToFakerModule, readJsonFile
 } = require('flexsim-lib');
 
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
@@ -19,11 +19,11 @@ async function run() {
   log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
-  const { client, dimValues, dimInstances, syncMap } = context;
+  const { client, dimValues, syncMap } = context;
   log(`read workflow: ${context.workflow.friendlyName}`);
   const valuesDescriptor = { entity: 'tasks', phase: 'arrive' };
-  const arrivalDimAndInst = getSingleDimInstance('arrivalGap', dimInstances);
-  const channelDimAndInst = getSingleDimInstance('channel', dimInstances);
+  const arrivalDim = getDimension('arrivalGap', context);
+  const channelDim = getDimension('channel', context);
 
   let now = Date.now();
   while (now < context.simStopTS) {
@@ -33,7 +33,7 @@ async function run() {
     const ixnId = getAndAdvanceIxnId(context);
     const ixnValues = getDimValues(context, valuesDescriptor);
     const customAttrs = getAttributes(context, valuesDescriptor);
-    const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDimAndInst);
+    const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDim);
     const item = { key: ixnId, data: { taskStatus: 'initiated', ixnValues, attributes: customAttrs, customer }, itemTtl: 240 };
     const syncMapItem = await createSyncMapItem(client, args.syncSvcSid, syncMap.sid, item);
     if (channelName === 'voice') {
@@ -44,7 +44,7 @@ async function run() {
       const task = await submitTask(context, ixnId, customer, valuesDescriptor);
       log(`made task ${formatSid(task.sid)}`);
     }
-    const arrivalGap = getDimValue(dimValues, valuesDescriptor.id, arrivalDimAndInst);
+    const arrivalGap = getDimValue(dimValues, valuesDescriptor.id, arrivalDim);
     await delay(arrivalGap * 1000);
     now = Date.now();
   }

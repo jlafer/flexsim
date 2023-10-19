@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { readJsonFile, writeToJsonFile } = require('flexsim-lib');
 const { PollyClient, SynthesizeSpeechCommand } = require("@aws-sdk/client-polly");
+const R = require('ramda');
 
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { log } = require('./helpers/util');
@@ -18,13 +19,23 @@ async function run() {
 run();
 
 async function genAudioTiming(cfg, speech) {
+  const data = {};
+  const timingPairs = R.toPairs(speech);
+  for (let i = 0; i < timingPairs.length; i++) {
+    const [intent, intentText] = timingPairs[i];
+    data[intent] = await addTimingTontentText(cfg, intentText);
+  }
+  return data;
+}
+
+async function addTimingTontentText(cfg, intentText) {
   const { metadata } = cfg;
   const { center, customers } = metadata;
-  const { agent, ivr } = speech;
+  const { selfService, assisted } = intentText;
 
-  const ivrTiming = await getPartyTiming(ivr, center.ivrVoice, customers.voice);
-  const agtTiming = await getPartyTiming(agent, center.agentVoice, customers.voice);
-  const data = { ivr: ivrTiming, agent: agtTiming };
+  const ivrTiming = await getPartyTiming(selfService, center.ivrVoice, customers.voice);
+  const agtTiming = await getPartyTiming(assisted, center.agentVoice, customers.voice);
+  const data = { selfService: ivrTiming, assisted: agtTiming };
   return data;
 }
 
@@ -62,7 +73,6 @@ async function getTimingForResponse(speech, voice) {
   const json = linesArr[linesArr.length - 2];
 
   const speechData = JSON.parse(json);
-  //const adjustmentForPersona = (['Ivy', 'Kimberly'].includes(persona)) ? -500 : 0;
   log('duration (mSec):', speechData.time);
   return speechData.time;
 }

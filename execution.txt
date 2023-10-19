@@ -2,6 +2,9 @@
 node src/genconfig.js --domaindir domain --cfgdir config/flexstats
 node src/genconfig.js --domaindir config/zscaler --cfgdir config/zscaler
 
+# (Optional) Voice timing generation
+node src/gentiming.js --cfgdir config/flexstats
+
 # Deploy Time
 node src/deploy.js --cfgdir config/flexstats
 node src/deploy.js --cfgdir config/zscaler

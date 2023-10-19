@@ -8,7 +8,7 @@ It can generate a Flex configuration, deploy Flex infrastructure into a Twilio p
 - testing of Flex plugins
 - feeding semi-realistic events to EventStreams
 
-The system is composed of multiple, independent scripts: configuration generator, infrastructure deployer, customer simulator and agent simulator. There is also a cleanup script to remove in-process tasks and, optionally, the deployed simulator resources from a Flex project.
+The system is composed of multiple, independent scripts: configuration generator, infrastructure deployer, customer simulator and agent simulator. There is also a cleanup script to remove in-process tasks and, optionally, the deployed simulator resources from a Flex project. If you want to use text-to-speech to simulate customer-agent interactions over real phone calls, there is a script for adding TTS timing to your conversation text.
 
 ## genconfig
 The configuration generator script reads a simulation domain description and outputs configuration files. It is used at simulation design time and only needs to run when the domain description has changed. The domain description and/or configuration files can be checked into source control and shared among users. The script does not require a Twilio project to execute and the configuration files contain no Twilio SIDs that tie them to a specific project.
@@ -26,6 +26,11 @@ The agent simulator script reads the configuration files, performs a login of th
 ## custsim
 The customer simulator script reads the configuration files and generates Tasks that are then routed to the simulation agents by the TaskRouter workflow deployed previously. The configuration files control the arrival rate, channels, customer intents and other parameters. Most activity durations, such as talk time, and attribute values are semi-random, meaning they have target values but will vary in a pseudo-random fashion around their target.
 
+## gentiming
+The system is capable of generating real phone calls from simulated customers that get recorded and can be monitored in the Teams View during a live demo. This is done by processing conversation scripts. You can use the default, localized scripts or configure your own. The scripts are processed by the IVR application, `custsim` and `agentsim` using TwiML.Each of these programs create a TwiML response with a sequence of `say` and `pause` verbs that alternate between talking and listening to the other party. To synchronize both "speakers", accurate durations must be supplied with the pauses.
+
+The `gentiming` script analyzes the configured conversational scripts and the configured Polly Voices to generate the timing information. This script must be run after `genconfig` and before `custsim` and `agentsim`. It creates a JSON file in the configuraton directory, which contains the conversation text and associated timing data.
+
 ## Configuration
 The system has four execution modes: configuration generation, infrastructure deployment, simulation and (as needed) cleanup. The configuration generation mode uses a combination of localized default values and an optional, user-supplied `domain.json` file to generate a set of JSON configuration files. The deployment, simulation and cleanup modules then read the configuration files when executing against a Flex project.
 
@@ -34,7 +39,7 @@ For ease of use, the configuration generator can be run without any input from t
 
 The defaults have been localized for US English and are read (by default) from a file at `localization/en-us.json`. The `flexsim` system can be localized for a different locale by creation of a different defaults file, which can then be specified using the `--locale` option to the `genconfig` and `custsim` scripts.
 
-The default values can then be overridden by the user using a combination of a `domain.json` file and command-line options. The `genconfig` script uses the combination of those values to generate the configuration files.
+The default values can then be overridden by the user using a combination of a (localized) `domain.json` file and command-line options. The `genconfig` script uses the combination of those values to generate the configuration files.
 
 ### domain.json
 For saving a custom simulation domain description, the user can provision a file named `domain.json` to supplement and/or override the defaults. It can be placed in a directory of the user's choice. The `genconfig` script can read this file, merge it with the values read from the localized defaults file, and generate the configuration files. This allows the user to control nearly every aspect of the resulting simulation: tasks, channels, agent counts, customer intents, routing criteria, handle times, agent activities, etc.
@@ -43,8 +48,56 @@ The domain file can be used to override the value-generation parameters for stan
 
 The format of the file is documented below. You can also inspect the `src/helpers/schema.js` file to see a JSON Schema definition for the file and inspect the `domain.json` file in the `domain` folder for an example. These should get the early adopter started. :-)
 
+### speech.json
+For saving custom, intent-specific conversation scripts, to be spoken by Polly voices during simulated phone calls, the user can provision a file named `speech.json` to override the defaults, which are located in the `/localization` folder in localized speech files. It can be placed in a directory of the user's choice. The `gentiming` script can read this file and use it rather than the localized defaults file. This allows the user to demo very realistic customer calls by monitoring them using the supervisor monitoring controls in the Teams View window and by listening to their recordings in Flex Insights.
+
+The format of the file is demonstrated by the JSON fragment below. You can also inspect the `localization/en-us-speech.json` file to see a complete example file. Note that the `default` property in the JSON object is used when a call's `intent` dimension value does not have its own entry in the file.
+
+```
+{
+  "default": {
+    "selfService": [
+      "first IVR line",
+      "first customer line",
+      "and so on..."
+    ],
+    "assisted": [
+      "first agent line",
+      "first customer line",
+      "and so on..."
+    ]
+  },
+  "intent 1": {
+    "selfService": [
+      "first IVR line",
+      "first customer line",
+      "and so on..."
+    ],
+    "assisted": [
+      "first agent line",
+      "first customer line",
+      "and so on..."
+    ]
+  },
+  "intent 2": {
+    "selfService": [
+      "first IVR line",
+      "first customer line",
+      "and so on..."
+    ],
+    "assisted": [
+      "first agent line",
+      "first customer line",
+      "and so on..."
+    ]
+  }
+}
+```
+
+NOTE: Whenever the speech files or the selected Polly voices (`center.ivrVoice`, `center.agentVoice` or `customer.voice`) are changed, the `gentiming` script must be re-run to re-calculate proper timings for the conversations.
+
 ### Command-line Options
-Each `flexsim` script supports a set of command-line options, which can be used to make dynamic changes to its operation. Most of these relate to Flex credentials, file locations and simulation length. See the `execution.txt` file for sample command lines.
+Each `flexsim` script supports a set of command-line options, which can be used to make dynamic changes to its operation. Most of these relate to Flex credentials, file locations and simulation length. See the `execution.sample` file for sample command lines.
  
 ### Environment Variables
 The scripts that use a Twilio project can use the following environment variables to reference that project and Workspace:
@@ -125,7 +178,7 @@ The optional command-line options include:
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 
 #### agentsim must be publicly accessible
-The simulation builds and deploys a TR Workflow that uses the configured Task attributes, routing criteria and Worker attributes to select and reserve the `flexsim` agents. When a reservation is made, Twilio calls the Workflow-specified assignment callback URL, in order to let the `agentsim` program know that an agent has been assigned a task and that it should now start "handling" the task. That URL can be configured by the user and must reference the host and port of the `agentsim` script, which must be publicly accessible. On a development machine, this can be done using a tunnel service like `ngrok`.
+The simulation builds and deploys a TR Workflow that uses the configured Task attributes, routing criteria and Worker attributes to select and reserve the `flexsim` agents. When a reservation is made, Twilio calls the Workflow-specified assignment callback URL, in order to let the `agentsim` program know that an agent has been assigned a task and that it should now start "handling" the task. That URL can be configured by the user and must reference the publicly accessible host and port of the `agentsim` script. On a development machine, this can be done using a tunnel service like `ngrok`.
 
 ### custsim
 To run the `custsim` script:
@@ -139,6 +192,7 @@ The optional command-line options include:
 - `seed` sets a seed value for the random number generator for predictable results from the script
 - Authentication credentials can also be supplied via the command line, overriding any found in the environment.
 
+If real voice calls are used, the `custsim` program must have a publicly accessible host and port to receive webhooks for events related to `gather` calls and the conference call used to bridge customer to agent.
 
 ### cleansim
 The `cleansim` script is used to reset or remove a flexsim deployment. By default, it deletes any Tasks that remain from a previous execution of the simulator. It also signs out any Workers who are signed in. Additional options support removal of Workers and call recordings.

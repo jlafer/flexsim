@@ -39,14 +39,19 @@ async function init() {
   // the call is answered by the center number app (i.e., IVR) (see "connectedUrl" above)
 
   app.post('/callConnected', async (req, res) => {
+    const { CallSid } = req.body;
     const { args, cfg } = context;
     log(`customer call connected to the IVR`);
 
+    const { intent } = callToIxn(context, CallSid);
     const twiml = new VoiceResponse();
     const { metadata, speech } = cfg;
     addSpeechToTwiml(
       twiml,
-      { speech: speech.ivr, isCenter: false, voice: metadata.customers.voice, pauseBetween: 3 }
+      {
+        speech, intent, mode: 'selfService', isCenter: false,
+        voice: metadata.customers.voice, pauseBetween: 3
+      }
     );
     // add a gather to wait for agent to respond
     addGatherDigitsToTwiml(twiml, args.custsimHost);
@@ -64,12 +69,15 @@ async function init() {
     const twiml = new VoiceResponse();
     if (Digits) {
       log(`  customer got the go-ahead digit from agentsim: ${Digits}`);
-      const { ixnId } = callToIxn(context, CallSid);
+      const { ixnId, intent } = callToIxn(context, CallSid);
       twiml.play({ digits: `${ixnId}#` });
       const { metadata, speech } = cfg;
       addSpeechToTwiml(
         twiml,
-        { speech: speech.agent, isCenter: false, voice: metadata.customers.voice, pauseBetween: 3 }
+        {
+          speech, intent, mode: 'assisted', isCenter: false,
+          voice: metadata.customers.voice, pauseBetween: 3
+        }
       );
     }
     else {

@@ -1,6 +1,11 @@
 # Design Time
 node src/genconfig.js --domaindir domain --cfgdir config
 
+# (Optional) Voice timing generation
+node src/gentiming.js --cfgdir config
+node src/gentiming.js --locale 'es-sp' --cfgdir config
+node src/gentiming.js --domaindir domain --cfgdir config
+
 # Deploy Time
 node src/deploy.js --cfgdir config
 

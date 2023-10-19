@@ -97,10 +97,8 @@ async function init() {
   // the phone number is defined in domain.center.agentsPhone
 
   app.post('/agentAnswered', async (req, res) => {
-    const { callsState, cfg } = context;
     const { CallSid } = req.body;
     log(`the agent has received the call: ${CallSid}`);
-    callsState[CallSid] = { speechIdx: 0 };
 
     const twiml = new VoiceResponse();
 
@@ -119,18 +117,25 @@ async function init() {
     if (Digits) {
       log(`  got ixnId: ${Digits}`);
       const { metadata, speech } = cfg;
-      const talkTime = addSpeechToTwiml(
-        twiml,
-        { speech: speech.agent, isCenter: true, voice: metadata.center.agentVoice, pauseBetween: 3 }
-      );
       const ixnId = parseInt(Digits);
       const ixnDataItem = await getSyncMapItem(context, ixnId);
       const { data } = ixnDataItem;
-      const { customer, taskSid, workerSid } = data;
-      const { fullName: custName } = customer;
+      const { customer, ixnValues, taskSid, workerSid } = data;
+      const intent = ixnValues.intent;
+
+      // this seems to help the timing; w/out it, the agent is always a bit early for some reason
+      twiml.pause({ length: 1 });
+      const talkTime = addSpeechToTwiml(
+        twiml,
+        {
+          speech, intent, mode: 'assisted', isCenter: true,
+          voice: metadata.center.agentVoice, pauseBetween: 3
+        }
+      );
       const worker = getWorker(context, workerSid);
-      const { friendlyName } = worker;
+      const { fullName: custName } = customer;
       const wrapTime = getDimensionValue(context, 'wrapTime', custName);
+      const { friendlyName } = worker;
       scheduleCompleteTask(context, taskSid, custName, friendlyName, (talkTime + wrapTime));
     }
     else {
@@ -253,7 +258,6 @@ const addDimValuesFromReservation = (context, name, TaskAge, WorkerAttributes) =
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
   context.ixnsByTaskSid = {};
-  context.callsState = {};
   return context;
 }
 

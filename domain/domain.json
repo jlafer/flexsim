@@ -1,12 +1,12 @@
 {
   "brand": "ACME",
-  "agentCnt": 30,
+  "agentCnt": 10,
   "queueFilterDim": "topic",
   "customers": {
     "country": "US",
     "phoneFormat": "+1#########",
     "customersPhone": "+15072747105",
-    "voice": "Polly.Kendra"
+    "voice": "Polly.Joanna"
   },
   "center": {
     "country": "US",
@@ -14,7 +14,7 @@
     "city": "SPRINGFIELD",
     "zip": "12345",
     "agentsPhone": "+18148134754",
-    "ivrVoice": "Polly.Joanna",
+    "ivrVoice": "Polly.Justin",
     "agentVoice": "Polly.Matthew"
   },
   "queueWorkerDims": [
@@ -161,25 +161,21 @@
       "expr": "enum",
       "options": {
         "all": [
-          "Checking",
-          "CreditCard",
-          "Mortgage",
-          "OtherLoans"
+          "Sales",
+          "Service",
+          "Support"
         ]
       },
       "optionParams": {
         "all": [
           {
-            "portion": 0.20
+            "portion": 0.30
           },
           {
-            "portion": 0.20
+            "portion": 0.30
           },
           {
-            "portion": 0.35
-          },
-          {
-            "portion": 0.25
+            "portion": 0.40
           }
         ]
       }
@@ -187,30 +183,25 @@
     "skill": {
       "entity": "workers",
       "phase": "deploy",
-      "attrName": "routing.skills",
       "expr": "enum",
       "valueCnt": 2,
       "options": {
         "all": [
-          "Checking",
-          "CreditCard",
-          "Mortgage",
-          "OtherLoans"
+          "Sales",
+          "Service",
+          "Support"
         ]
       },
       "optionParams": {
         "all": [
           {
-            "portion": 0.20
+            "portion": 0.30
           },
           {
-            "portion": 0.20
+            "portion": 0.30
           },
           {
-            "portion": 0.35
-          },
-          {
-            "portion": 0.25
+            "portion": 0.40
           }
         ]
       }
@@ -218,28 +209,77 @@
     "intent": {
       "entity": "tasks",
       "phase": "arrive",
+      "parent": "topic",
       "expr": "enum",
       "options": {
-        "all": [
-          "Check account balance",
-          "Check payment clearance",
-          "Change password",
-          "Inquire on rates"
+        "Sales": [
+          "Pricing Inquiry",
+          "Place Order",
+          "Cancel Order",
+          "Update Order"
+        ],
+        "Service": [
+          "Check Account Balance",
+          "Check Payment Clearance",
+          "Change Password",
+          "Billing Question",
+          "Refund Request",
+          "Check Delivery Date"
+        ],
+        "Support": [
+          "Open Trouble Ticket",
+          "Close Trouble Ticket",
+          "Update Trouble Ticket",
+          "Escalate Trouble Ticket"
         ]
       },
       "optionParams": {
-        "all": [
-          {
-            "portion": 0.20
-          },
-          {
-            "portion": 0.20
-          },
+        "Sales": [
           {
             "portion": 0.35
           },
           {
+            "portion": 0.20
+          },
+          {
             "portion": 0.25
+          },
+          {
+            "portion": 0.20
+          }
+        ],
+        "Service": [
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.20
+          },
+          {
+            "portion": 0.10
+          },
+          {
+            "portion": 0.10
+          }
+        ],
+        "Support": [
+          {
+            "portion": 0.15
+          },
+          {
+            "portion": 0.30
+          },
+          {
+            "portion": 0.25
+          },
+          {
+            "portion": 0.30
           }
         ]
       }

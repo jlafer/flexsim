@@ -24,12 +24,15 @@ function addGatherDigitsToTwiml(twiml, actionHost) {
 }
 
 function addSpeechToTwiml(twiml, params) {
-  const { speech, isCenter, voice, pauseBetween } = params;
+  const { speech, intent, mode, isCenter, voice, pauseBetween } = params;
   let elapsedOtherSpeech = 0;
   let elapsedPaused = 0;
   let elapsedAll = 0;
   let idx = 0;
-  speech.forEach(line => {
+  const convo = intent || 'default';
+  const convoSpeech = speech[convo] || speech.default;
+
+  convoSpeech[mode].forEach(line => {
     const sepIdx = line.indexOf('-');
     const speechDur = parseInt(line.slice(0, sepIdx));
     const text = line.slice(sepIdx + 1);

@@ -1,18 +1,18 @@
 {
   "brand": "Owl Industries",
-  "agentCnt": 20,
+  "agentCnt": 10,
+  "customers": {
+    "country": "US",
+    "phoneFormat": "+1#########",
+    "voice": "Polly.Joanna"
+  },
   "center": {
     "country": "US",
     "state": "NE",
     "city": "OMAHA",
     "zip": "54321",
-    "ivrVoice": "Polly.Joanna",
+    "ivrVoice": "Polly.Justin",
     "agentVoice": "Polly.Matthew"
-  },
-  "customers": {
-    "country": "US",
-    "phoneFormat": "+1#########",
-    "voice": "Polly.Kendra"
   },
   "queueFilterDim": "topic",
   "queueWorkerDims": [
@@ -146,7 +146,7 @@
       "optionParams": {
         "all": [
           {
-            "portion": 0.20
+            "portion": 0.30
           },
           {
             "portion": 0.30
@@ -172,7 +172,7 @@
       "optionParams": {
         "all": [
           {
-            "portion": 0.20
+            "portion": 0.30
           },
           {
             "portion": 0.30
@@ -227,16 +227,16 @@
         ],
         "Service": [
           {
-            "portion": 0.10
+            "portion": 0.20
           },
           {
-            "portion": 0.10
+            "portion": 0.20
           },
           {
-            "portion": 0.10
+            "portion": 0.20
           },
           {
-            "portion": 0.10
+            "portion": 0.20
           },
           {
             "portion": 0.10

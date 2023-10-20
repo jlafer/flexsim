@@ -159,6 +159,7 @@
     },
     "skill": {
       "entity": "workers",
+      "attrName": "routing.skills",
       "phase": "deploy",
       "expr": "enum",
       "valueCnt": 2,

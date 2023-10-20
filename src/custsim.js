@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require('express');
 const R = require('ramda');
 const {
-  getDimOptionParam, getDimension, readJsonFile, formatSid
+  addSpeechToTwiml, getDimOptionParam, getDimension, readJsonFile, formatSid
 } = require('flexsim-lib');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
@@ -10,7 +10,7 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
-const { addGatherDigitsToTwiml, addSpeechToTwiml, log, respondWithTwiml } = require('./helpers/util');
+const { addGatherDigitsToTwiml, log, respondWithTwiml } = require('./helpers/util');
 const { makeCall, hangupCall } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
 
@@ -30,8 +30,12 @@ async function init() {
   app.post('/makeCustomerCall', async (req, res) => {
     const { ixnId } = req.body;
 
+    const ixnDataItem = await getSyncMapItem(context, ixnId);
+    const { data } = ixnDataItem;
+    const { ixnValues } = data;
+
     const callSid = await makeCallToCenter(context, ixnId);
-    mapCallToIxn(context, callSid, ixnId, { otherParty: 'ivr' });
+    mapCallToIxn(context, callSid, ixnId, ixnValues);
     res.send({ callSid });
   });
 
@@ -41,16 +45,15 @@ async function init() {
   app.post('/callConnected', async (req, res) => {
     const { CallSid } = req.body;
     const { args, cfg } = context;
-    log(`customer call connected to the IVR`);
+    log(`customer call connected to the IVR: ${formatSid(CallSid)}`);
 
     const { intent } = callToIxn(context, CallSid);
     const twiml = new VoiceResponse();
-    const { metadata, speech } = cfg;
+    const { speech } = cfg;
     addSpeechToTwiml(
       twiml,
       {
-        speech, intent, mode: 'selfService', isCenter: false,
-        voice: metadata.customers.voice, pauseBetween: 3
+        speech, intent, mode: 'selfService', isCenter: false, pauseBetween: 3
       }
     );
     // add a gather to wait for agent to respond
@@ -68,15 +71,14 @@ async function init() {
 
     const twiml = new VoiceResponse();
     if (Digits) {
-      log(`  customer got the go-ahead digit from agentsim: ${Digits}`);
+      log(`  customer got the go-ahead digit from agentsim for call ${formatSid(CallSid)}`);
       const { ixnId, intent } = callToIxn(context, CallSid);
       twiml.play({ digits: `${ixnId}#` });
-      const { metadata, speech } = cfg;
+      const { speech } = cfg;
       addSpeechToTwiml(
         twiml,
         {
-          speech, intent, mode: 'assisted', isCenter: false,
-          voice: metadata.customers.voice, pauseBetween: 3
+          speech, intent, mode: 'assisted', isCenter: false, pauseBetween: 3
         }
       );
     }
@@ -95,7 +97,7 @@ async function init() {
     const ixnDataItem = await getSyncMapItem(context, ixnId);
     const { data } = ixnDataItem;
     const { ixnValues } = data;
-    log(`  call routing ixnValues:`, ixnValues);
+    //log(`  call routing ixnValues:`, ixnValues, 'debug');
 
     // get customer-out call SID, needed for hanging up call
     const { callSid } = ixnToCall(context, ixnId);
@@ -112,7 +114,6 @@ async function init() {
   app.post('/agentJoined', async (req, res) => {
     const { ixnId } = req.body;
 
-    setOtherParty(context, ixnId, 'agent');
     res.status(200).send({});
   });
 
@@ -120,7 +121,7 @@ async function init() {
 
   app.post('/callStatus', async (req, res) => {
     const summary = R.pick(['CallSid', 'CallStatus', 'CallDuration'], req.body);
-    log(`callStatus called:`, summary);
+    log(`call status ended for call ${formatSid(summary.CallSid)}`);
 
     unmapCallToIxn(context, summary.CallSid);
     res.status(200).send({});
@@ -178,7 +179,7 @@ const initializeContext = (cfg, args) => {
   return context;
 }
 
-// link the customer-out call SID and the ixnId with the ixnData
+// link the customer-out call SID and the ixnId
 const mapCallToIxn = (ctx, callSid, ixnId, ixnData) => {
   ctx.ixndataByIxnId[ixnId] = { ...ixnData, callSid };
   ctx.ixndataByCallSid[callSid] = { ...ixnData, ixnId };
@@ -193,11 +194,6 @@ const unmapCallToIxn = (ctx, callSid) => {
   else
     log(`Warning: unmapCallToIxn did not find call ${formatSid(callSid)}`, null, 'warn');
 }
-
-const setOtherParty = (ctx, ixnId, partyStr) => {
-  const ixnData = ixnToCall(ctx, ixnId);
-  mapCallToIxn(ctx, ixnData.callSid, ixnId, { otherParty: partyStr });
-};
 
 const ixnToCall = (ctx, ixnId) => {
   return ctx.ixndataByIxnId[ixnId];

@@ -4,7 +4,7 @@ const express = require('express');
 const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
-  calcActivityChange, calcDimsValues, findObjInList, formatSid,
+  addSpeechToTwiml, calcActivityChange, calcDimsValues, findObjInList, formatSid,
   getDimensionValue, readJsonFile
 } = require('flexsim-lib');
 
@@ -13,7 +13,7 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem, updateSyncMapItem } = require('./helpers/sync');
 const { completeTask, startConference, wrapupTask } = require('./helpers/task');
-const { addGatherDigitsToTwiml, addSpeechToTwiml, log, respondWithTwiml } = require('./helpers/util');
+const { addGatherDigitsToTwiml, log, respondWithTwiml } = require('./helpers/util');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
@@ -89,7 +89,7 @@ async function init() {
     const { fullName: custName } = customer;
     addTaskValuesFromSync(context, custName, ixnValues);
     addDimValuesFromReservation(context, custName, TaskAge, WorkerAttributes);
-    console.log('newData:', newData);
+    //console.log('newData:', newData);
     return newData;
   }
 
@@ -98,7 +98,7 @@ async function init() {
 
   app.post('/agentAnswered', async (req, res) => {
     const { CallSid } = req.body;
-    log(`the agent has received the call: ${CallSid}`);
+    log(`the agent has received a call: ${formatSid(CallSid)}`);
 
     const twiml = new VoiceResponse();
 
@@ -128,8 +128,7 @@ async function init() {
       const talkTime = addSpeechToTwiml(
         twiml,
         {
-          speech, intent, mode: 'assisted', isCenter: true,
-          voice: metadata.center.agentVoice, pauseBetween: 3
+          speech, intent, mode: 'assisted', isCenter: true, pauseBetween: 3
         }
       );
       const worker = getWorker(context, workerSid);
@@ -156,10 +155,10 @@ async function init() {
       log(`/conferenceStatus: agent joined the conference call ${formatSid(CallSid)} and task ${formatSid(TaskSid)}`);
       log(`  with CustomerCallSid ${formatSid(CustomerCallSid)} and Muted = ${Muted}`);
       const ixnId = taskToIxn(context, TaskSid);
-      const data = await notifyCustsim(
-        context,
-        { ixnId, taskSid: TaskSid, customerCallSid: CustomerCallSid, callSid: CallSid }
-      );
+      //const data = await notifyCustsim(
+      //  context,
+      //  { ixnId, taskSid: TaskSid, customerCallSid: CustomerCallSid, callSid: CallSid }
+      //);
 
       // NOTE: removing ixnId from cache as it's no longer needed;
       // move to a task-completed handler if this changes

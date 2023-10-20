@@ -8,8 +8,9 @@
     "deploy": "twilio-run deploy"
   },
   "dependencies": {
-    "twilio": "^3.56",
-    "@twilio/runtime-handler": "1.3.0"
+    "@twilio/runtime-handler": "1.3.0",
+    "flexsim-lib": "^0.0.27",
+    "twilio": "^3.56"
   },
   "devDependencies": {
     "twilio-run": "^3.5.2"

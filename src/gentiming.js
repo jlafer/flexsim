@@ -19,12 +19,20 @@ async function run() {
 run();
 
 async function genAudioTiming(cfg, speech) {
+  const { metadata } = cfg;
+  const { center, customers } = metadata;
+
   const data = {};
   const timingPairs = R.toPairs(speech);
   for (let i = 0; i < timingPairs.length; i++) {
     const [intent, intentText] = timingPairs[i];
     data[intent] = await addTimingTontentText(cfg, intentText);
   }
+  data.voices = {
+    customer: customers.voice,
+    ivr: center.ivrVoice,
+    agent: center.agentVoice
+  };
   return data;
 }
 

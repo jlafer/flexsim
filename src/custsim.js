@@ -10,8 +10,8 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem } = require('./helpers/sync');
-const { addGatherDigitsToTwiml, log, respondWithTwiml } = require('./helpers/util');
-const { makeCall, hangupCall } = require('./helpers/voice');
+const { log, respondWithTwiml } = require('./helpers/util');
+const { makeCall, hangupCall, updateCallTwiML } = require('./helpers/voice');
 const { fetchWorkflow } = require('./helpers/workflow');
 
 
@@ -40,7 +40,7 @@ async function init() {
   });
 
   // the callConnected endpoint is called by the 'connectedUrl' callback when
-  // the call is answered by the center number app (i.e., IVR) (see "connectedUrl" above)
+  // the call is answered by the IVR (see "connectedUrl" above)
 
   app.post('/callConnected', async (req, res) => {
     const { CallSid } = req.body;
@@ -56,35 +56,7 @@ async function init() {
         speech, intent, mode: 'selfService', isCenter: false, pauseBetween: 3
       }
     );
-    // add a gather to wait for agent to respond
-    addGatherDigitsToTwiml(twiml, args.custsimHost);
-    respondWithTwiml(res, twiml);
-  });
-
-  // the digitsGathered endpoint is called by the Gather callback
-  //   when DTMF is gathered from the agentsim or the gather times out
-
-  app.post('/digitsGathered', async (req, res) => {
-    const { args, cfg } = context;
-    const { CallSid, Digits } = req.body;
-    log(`/digitsGathered called for call ${formatSid(CallSid)}`);
-
-    const twiml = new VoiceResponse();
-    if (Digits) {
-      log(`  customer got the go-ahead digit from agentsim for call ${formatSid(CallSid)}`);
-      const { ixnId, intent } = callToIxn(context, CallSid);
-      twiml.play({ digits: `${ixnId}#` });
-      const { speech } = cfg;
-      addSpeechToTwiml(
-        twiml,
-        {
-          speech, intent, mode: 'assisted', isCenter: false, pauseBetween: 3
-        }
-      );
-    }
-    else {
-      addGatherDigitsToTwiml(twiml, args.custsimHost);
-    }
+    twiml.play({ loop: 8 }, `https://${args.serverlessSubdomain}-dev.twil.io/Silence.mp3`);
     respondWithTwiml(res, twiml);
   });
 
@@ -97,7 +69,6 @@ async function init() {
     const ixnDataItem = await getSyncMapItem(context, ixnId);
     const { data } = ixnDataItem;
     const { ixnValues } = data;
-    //log(`  call routing ixnValues:`, ixnValues, 'debug');
 
     // get customer-out call SID, needed for hanging up call
     const { callSid } = ixnToCall(context, ixnId);
@@ -114,6 +85,9 @@ async function init() {
   app.post('/agentJoined', async (req, res) => {
     const { ixnId } = req.body;
 
+    const { callSid, intent } = ixnToCall(context, ixnId);
+    log(`agentsim sent synchronization for ixn ${ixnId} and call ${formatSid(callSid)}`);
+    updateCallWithSpeech(context, callSid, intent);
     res.status(200).send({});
   });
 
@@ -133,6 +107,20 @@ async function init() {
 }
 
 init();
+
+function updateCallWithSpeech(context, callSid, intent) {
+  const { cfg, client } = context;
+  const { speech } = cfg;
+
+  const twiml = new VoiceResponse();
+  addSpeechToTwiml(
+    twiml,
+    {
+      speech, intent, mode: 'assisted', isCenter: false, pauseBetween: 3
+    }
+  );
+  updateCallTwiML(client, callSid, twiml);
+}
 
 async function makeCallToCenter(context, ixnId) {
   const { client, args, cfg } = context;
@@ -214,7 +202,7 @@ function getArgs() {
     aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', l: 'locale', p: 'port' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, CUSTSIM_HOST, CUSTSIM_PORT, SYNC_SVC_SID } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, CUSTSIM_HOST, CUSTSIM_PORT, SYNC_SVC_SID, SERVERLESS_FN_SUBDOMAIN } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
@@ -224,6 +212,7 @@ function getArgs() {
   args.custsimHost = CUSTSIM_HOST;
   args.port = args.port || CUSTSIM_PORT || 3001;
   args.syncSvcSid = SYNC_SVC_SID;
+  args.serverlessSubdomain = SERVERLESS_FN_SUBDOMAIN;
   logArgs(args);
   return args;
 }

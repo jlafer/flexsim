@@ -6,6 +6,11 @@ const makeCall = async ({ client, from, to, sendDigits, connectedUrl, statusUrl 
   return call.sid;
 };
 
+const updateCallTwiML = (client, callSid, twiml) => {
+  client.calls(callSid)
+    .update({ twiml });
+};
+
 const hangupCall = (client, callSid) => {
   client.calls(callSid)
     .update({ status: 'completed' });
@@ -60,5 +65,6 @@ const getYrMoDayFromStr = (yrMoDayStr) => {
 module.exports = {
   makeCall,
   hangupCall,
-  removeRecordings
+  removeRecordings,
+  updateCallTwiML
 }

@@ -4,8 +4,8 @@ const express = require('express');
 const R = require('ramda');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {
-  addSpeechToTwiml, calcActivityChange, calcDimsValues, findObjInList, formatSid,
-  getDimensionValue, readJsonFile
+  addSpeechToTwiml, calcActivityChange, calcDimsValues, findObjInList,
+  formatSid, getDimensionValue, readJsonFile
 } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
@@ -13,11 +13,21 @@ const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
 const { getOrCreateSyncMap, getSyncMapItem, updateSyncMapItem } = require('./helpers/sync');
 const { completeTask, startConference, wrapupTask } = require('./helpers/task');
-const { addGatherDigitsToTwiml, log, respondWithTwiml } = require('./helpers/util');
+const { log, respondWithTwiml } = require('./helpers/util');
+const { updateCallTwiML } = require('./helpers/voice');
 const {
   changeActivity, fetchFlexsimWorkers, fetchWorker, getWorker
 } = require('./helpers/worker');
 
+/*
+  Data
+
+  ctx.ixnsByTaskSid[taskSid] = ixnId
+  ctx.callsByTaskSid[taskSid] = callSid
+  ctx.expectedMedia =[callSids]
+  The syncmap is documented in helpers/sync.js
+
+*/
 
 async function init() {
   const args = getArgs();
@@ -40,8 +50,6 @@ async function init() {
   // for other channels, it accepts the reservation
 
   app.post('/reservation', async (req, res) => {
-    const { dimValues } = context;
-
     const ixnData = await updateIxnDataFromReservation(context, req.body);
     const { workerSid, taskSid, reservationSid, customer } = ixnData;
     const worker = getWorker(context, workerSid);
@@ -52,7 +60,7 @@ async function init() {
     const wrapTime = getDimensionValue(context, 'wrapTime', valuesDescriptor.id);
     const channelName = getDimensionValue(context, 'channel', valuesDescriptor.id);
     if (channelName === 'voice') {
-      const reservation = await startConference(context, taskSid, reservationSid);
+      await startConference(context, taskSid, reservationSid);
       res.status(200).send({});
     }
     else {
@@ -63,20 +71,15 @@ async function init() {
     }
   })
 
-  /*
-    Data
-
-    ctx.ixnsByTaskSid[taskSid] = ixnId
-
-    The syncmap is documented in helpers/sync.js
-
-  */
-
   async function updateIxnDataFromReservation(context, body) {
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = body;
+
     const taskAttributes = JSON.parse(TaskAttributes);
-    const { ixnId } = taskAttributes;
+    log('attributes:', taskAttributes);
+    log('media:', taskAttributes.conversations.media);
+    const { ixnId, call_sid } = taskAttributes;
     mapTaskToIxn(context, TaskSid, ixnId);
+    mapTaskToCall(context, TaskSid, call_sid);
     const ixnDataItem = await getSyncMapItem(context, ixnId);
     const { data } = ixnDataItem;
     const newData = {
@@ -89,7 +92,6 @@ async function init() {
     const { fullName: custName } = customer;
     addTaskValuesFromSync(context, custName, ixnValues);
     addDimValuesFromReservation(context, custName, TaskAge, WorkerAttributes);
-    //console.log('newData:', newData);
     return newData;
   }
 
@@ -100,46 +102,9 @@ async function init() {
     const { CallSid } = req.body;
     log(`the agent has received a call: ${formatSid(CallSid)}`);
 
+    context.expectedMedia.push(CallSid);
     const twiml = new VoiceResponse();
-
-    // added pause to ensure custsim is ready after its say/pause loop with the ivr
-    twiml.pause({ length: 2 });
-    twiml.play({ digits: '0#' });
-    addGatherDigitsToTwiml(twiml, args.agentsimHost);
-    respondWithTwiml(res, twiml);
-  });
-
-  app.post('/digitsGathered', async (req, res) => {
-    const { args, cfg } = context;
-    const { CallSid, Digits } = req.body;
-    log(`/digitsGathered called for call ${formatSid(CallSid)}`);
-    const twiml = new VoiceResponse();
-    if (Digits) {
-      log(`  got ixnId: ${Digits}`);
-      const { metadata, speech } = cfg;
-      const ixnId = parseInt(Digits);
-      const ixnDataItem = await getSyncMapItem(context, ixnId);
-      const { data } = ixnDataItem;
-      const { customer, ixnValues, taskSid, workerSid } = data;
-      const intent = ixnValues.intent;
-
-      // this seems to help the timing; w/out it, the agent is always a bit early for some reason
-      twiml.pause({ length: 1 });
-      const talkTime = addSpeechToTwiml(
-        twiml,
-        {
-          speech, intent, mode: 'assisted', isCenter: true, pauseBetween: 3
-        }
-      );
-      const worker = getWorker(context, workerSid);
-      const { fullName: custName } = customer;
-      const wrapTime = getDimensionValue(context, 'wrapTime', custName);
-      const { friendlyName } = worker;
-      scheduleCompleteTask(context, taskSid, custName, friendlyName, (talkTime + wrapTime));
-    }
-    else {
-      addGatherDigitsToTwiml(twiml, args.agentsimHost);
-    }
+    twiml.play({ loop: 1 }, `https://${args.serverlessSubdomain}-dev.twil.io/Silence.mp3`);
     respondWithTwiml(res, twiml);
   });
 
@@ -152,13 +117,23 @@ async function init() {
     // skip the duplicate notification that happens because both customer and agent parties
     // are in the same Twilio project; also skip any coaching from the TeamsView
     if (CallSid !== CustomerCallSid && StatusCallbackEvent === 'participant-join' && Muted === 'false') {
-      log(`/conferenceStatus: agent joined the conference call ${formatSid(CallSid)} and task ${formatSid(TaskSid)}`);
-      log(`  with CustomerCallSid ${formatSid(CustomerCallSid)} and Muted = ${Muted}`);
+      log(`/conferenceStatus: participant joined the conference for task ${formatSid(TaskSid)} from call ${formatSid(CallSid)}`);
       const ixnId = taskToIxn(context, TaskSid);
-      //const data = await notifyCustsim(
-      //  context,
-      //  { ixnId, taskSid: TaskSid, customerCallSid: CustomerCallSid, callSid: CallSid }
-      //);
+      synchronizeWithCustsim(
+        context,
+        { ixnId, taskSid: TaskSid, customerCallSid: CustomerCallSid, callSid: CallSid }
+      );
+      const ixnDataItem = await getSyncMapItem(context, ixnId);
+      const { data } = ixnDataItem;
+      const { customer, ixnValues, workerSid } = data;
+      const intent = ixnValues.intent;
+      const worker = getWorker(context, workerSid);
+      const { fullName: custName } = customer;
+      const wrapTime = getDimensionValue(context, 'wrapTime', custName);
+      const { friendlyName } = worker;
+      const nextCallSid = context.expectedMedia.shift();
+      const talkTime = updateCallWithSpeech(context, nextCallSid, intent, 1);
+      scheduleCompleteTask(context, TaskSid, custName, friendlyName, (talkTime + wrapTime));
 
       // NOTE: removing ixnId from cache as it's no longer needed;
       // move to a task-completed handler if this changes
@@ -174,9 +149,27 @@ async function init() {
 
 init();
 
-const notifyCustsim = async (ctx, taskAndCall) => {
+function updateCallWithSpeech(context, callSid, intent, delay) {
+  const { cfg, client } = context;
+  const { speech } = cfg;
+
+  const twiml = new VoiceResponse();
+  if (delay)
+    twiml.pause({ length: delay });
+  const talkTime = addSpeechToTwiml(
+    twiml,
+    {
+      speech, intent, mode: 'assisted', isCenter: true, pauseBetween: 3
+    }
+  );
+  updateCallTwiML(client, callSid, twiml);
+  return talkTime;
+}
+
+const synchronizeWithCustsim = async (ctx, taskAndCall) => {
   const { args } = ctx;
   const { custsimHost } = args;
+
   const config = {
     method: 'post',
     url: `${custsimHost}/agentJoined`,
@@ -209,6 +202,7 @@ function scheduleCompleteTask(context, TaskSid, custName, friendlyName, delaySec
 
 async function loginAllWorkers(context) {
   const { workers } = context;
+
   for (let i = 0; i < workers.length; i++) {
     const worker = workers[i];
     const { sid, friendlyName, attributes } = worker;
@@ -218,10 +212,10 @@ async function loginAllWorkers(context) {
 }
 
 async function changeActivityAndWait(context, WorkerSid, activityName) {
+  const { activities } = context;
+
   const worker = await fetchWorker(context, WorkerSid);
   const { sid, friendlyName, activityName: currActivityName } = worker;
-
-  const { activities } = context;
   const activity = findObjInList('friendlyName', activityName, activities);
 
   if (activityName !== currActivityName) {
@@ -239,6 +233,7 @@ async function changeActivityAndWait(context, WorkerSid, activityName) {
 
 async function loadTwilioResources(context) {
   const { args, client } = context;
+
   context.activities = await fetchActivities(context);
   context.workers = await fetchFlexsimWorkers(context);
   context.syncMap = await getOrCreateSyncMap(client, args.syncSvcSid, 'calls');
@@ -257,6 +252,8 @@ const addDimValuesFromReservation = (context, name, TaskAge, WorkerAttributes) =
 const initializeContext = (cfg, args) => {
   const context = initializeCommonContext(cfg, args);
   context.ixnsByTaskSid = {};
+  context.callsByTaskSid = {};
+  context.expectedMedia = [];
   return context;
 }
 
@@ -275,12 +272,27 @@ const taskToIxn = (ctx, taskSid) => {
   return ctx.ixnsByTaskSid[taskSid];
 };
 
+// link the taskSid with the callSid; the callSid is needed by the conferenceStatusCallback(agent-join)
+// handler, which it needs to update the agent-in call
+
+const mapTaskToCall = (ctx, taskSid, callSid) => {
+  ctx.callsByTaskSid[taskSid] = callSid;
+}
+
+const unmapTaskToCall = (ctx, taskSid) => {
+  R.dissoc(taskSid, ctx.callsByTaskSid);
+}
+
+const taskToCall = (ctx, taskSid) => {
+  return ctx.callsByTaskSid[taskSid];
+};
+
 function getArgs() {
   const args = parseAndValidateArgs({
     aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', p: 'port' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_HOST, AGENTSIM_PORT, CUSTSIM_HOST, SYNC_SVC_SID } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_HOST, AGENTSIM_PORT, CUSTSIM_HOST, SYNC_SVC_SID, SERVERLESS_FN_SUBDOMAIN } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
@@ -290,12 +302,14 @@ function getArgs() {
   args.agentsimHost = AGENTSIM_HOST;
   args.custsimHost = CUSTSIM_HOST;
   args.syncSvcSid = SYNC_SVC_SID;
+  args.serverlessSubdomain = SERVERLESS_FN_SUBDOMAIN;
   logArgs(args);
   return args;
 }
 
 async function readConfiguration(args) {
   const { cfgdir } = args;
+
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
   const speech = await readJsonFile(`${cfgdir}/speechData.json`);
   const workers = await readJsonFile(`${cfgdir}/workers.json`);

@@ -1,6 +1,13 @@
 node_modules
 TODO.txt
 .env
+.env.*
+!.env.sample
 config/
 testWorker.json
 samples.json
+ngrok.yaml
+simngrok.sh
+execution.txt
+domain/domain.json
+.DS_Store

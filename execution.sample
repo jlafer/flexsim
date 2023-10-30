@@ -1,0 +1,22 @@
+# Design Time
+node src/genconfig.js --domaindir domain --cfgdir config
+
+# Prepare Twilio project
+node src/installAssets.js --cfgdir config
+
+# (Optional) Voice timing generation
+node src/timeSpeech.js --cfgdir config
+node src/timeSpeech.js --locale 'es-sp' --cfgdir config
+node src/timeSpeech.js --domaindir domain --cfgdir config
+
+# Deploy Time
+node src/deploy.js --cfgdir config
+node src/deploySpeech.js --cfgdir config/flexstats
+
+# Execution Time
+node src/agentsim.js --cfgdir config
+node src/custsim.js --cfgdir config
+node src/flexsim.js --cfgdir config -t 600
+
+# If cleanup needed
+node src/cleansim.js --cfgdir config

@@ -1,18 +1,13 @@
 require("dotenv").config();
 const { readJsonFile } = require('flexsim-lib');
 
-const { fetchActivities } = require('./helpers/activity');
 const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const {
   fetchServerlessService, fetchEnvironmentByName, buildAndDeployServerless,
   createSpeechAssetVersion, fetchAssetByName
 } = require('./helpers/asset');
-const { fetchTaskChannels } = require('./helpers/channel');
 const { initializeCommonContext } = require('./helpers/context');
-const { fetchQueues, createQueues, removeQueues } = require('./helpers/queue');
 const { log } = require('./helpers/util');
-const { createWorkers, fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
-const { createWorkflow, fetchWorkflows, removeWorkflow } = require('./helpers/workflow');
 
 
 async function run() {
@@ -21,7 +16,6 @@ async function run() {
   log('cfg:', cfg);
   const context = initializeCommonContext(cfg, args);
   await fetchCurrInfra(context);
-  await removeOldInfra(context);
   await deployNewInfra(context);
 }
 
@@ -31,38 +25,22 @@ async function fetchCurrInfra(context) {
   context.serverless = await fetchServerlessService(context);
   context.environment = await fetchEnvironmentByName(context, 'prod');
   context.speechAsset = await fetchAssetByName(context, 'speech');
-  context.queues = await fetchQueues(context);
-  context.workflows = await fetchWorkflows(context);
-  context.workers = await fetchFlexsimWorkers(context);
-  context.activities = await fetchActivities(context);
-  context.channels = await fetchTaskChannels(context);
-}
-
-async function removeOldInfra(context) {
-  await removeWorkflow(context);
-  await removeWorkers(context);
-  await removeQueues(context);
 }
 
 async function deployNewInfra(context) {
-  context.workers = await createWorkers(context);
-  context.queues = await createQueues(context);
   context.speechAssetVersion = await createSpeechAssetVersion(context);
   context.deployment = await buildAndDeployServerless(context);
-  context.workflow = await createWorkflow(context);
 }
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', u: 'assignURL' },
+    aliases: { a: 'acct', A: 'auth', c: 'cfgdir' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, ASSIGN_URL } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
-  args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
-  args.assignURL = args.assignURL || ASSIGN_URL;
   logArgs(args);
   return args;
 }
@@ -71,9 +49,6 @@ async function readConfiguration(args) {
   const { cfgdir } = args;
 
   const metadata = await readJsonFile(`${cfgdir}/metadata.json`);
-  const workers = await readJsonFile(`${cfgdir}/workers.json`);
-  const queues = await readJsonFile(`${cfgdir}/queues.json`);
   const speech = await readJsonFile(`${cfgdir}/speechData.json`);
-  const workflow = await readJsonFile(`${cfgdir}/workflow.json`);
-  return { metadata, queues, speech, workers, workflow };
+  return { metadata, speech };
 }

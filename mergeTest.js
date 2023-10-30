@@ -18,5 +18,9 @@ const right = {
   d: [3, 4, 5]
 };
 
-const res = R.mergeDeepRight(left, right);
+let res;
+//res = R.mergeDeepRight(left, right);
+//console.log(res);
+
+res = R.assocPath(['b', 'e4'], 42, right);
 console.log(res);

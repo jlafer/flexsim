@@ -1,0 +1,52 @@
+{
+  "default": {
+    "selfService": [
+      "Welcome to Owl Industries. I am a virtual assistant.",
+      "I have a problem with my bill.",
+      "I'm sorry to hear you're having troubles. Let me transfer you to a billing specialist.",
+      "Thank you."
+    ],
+    "assisted": [
+      "Hello. My name is John. How can I help you today?",
+      "Hi John. I have a problem with my bill.",
+      "Oh, I'm sorry to hear that. What seems to be the issue?",
+      "Well, the bill is too high. I'm simply shocked by the amount.",
+      "I see. Does the bill seem to be in error?",
+      "No, the bill is correct but it's simply too much.",
+      "Oh. What did you want me to do about that?",
+      "I would like to have you move, say, half of my bill to someone else - someone who is willing to pay that amount.",
+      "Okay, who should I pick? Should I just choose someone at random?",
+      "No, I was thinking you could call other customers and see who wants to help out with my bill.",
+      "Uh huh. Sorry - that's not going to happen. How about a payment plan?",
+      "You can do that?",
+      "Yes. You would pay the bill over a twelve-month period and we would finance the balance at a thirty percent A P R.",
+      "Oh that would be fantastic. You're the best John. Thank you for your help. Good bye!"
+    ]
+  },
+  "Open Trouble Ticket": {
+    "selfService": [
+      "Welcome to Owl Industries. I am a virtual assistant.",
+      "I'm having a problem with the battery in my device.",
+      "I'm sorry to hear you're having troubles. Let me transfer you to an engineer.",
+      "Thank you."
+    ],
+    "assisted": [
+      "Hello. My name is John. How can I help you today?",
+      "Hi John. I am having a problem with the device.",
+      "Oh, I'm sorry to hear that. What seems to be the issue?",
+      "Well. The battery life seems incredibly short. The thing is almost unusable.",
+      "I see. How long does the battery last before it needs to be recharged?",
+      "It only lasts about two hours and then I have to look for a charging station.",
+      "Do you have trouble finding a place to charge the device?",
+      "That is not the problem. Are you mental? It just annoys me that the battery doesn't last very long.",
+      "Okay - calm down. I am just trying to determine whether you are one of those customers who is never satisfied.",
+      "I'm getting less satisfied all the time but perhaps we should focus.",
+      "Okay. How old is the device? If it's more than three years old, you probably need a new one.",
+      "I don't want to upgrade but if that's the only solution then sign me up!",
+      "Very good! I've placed and order for the latest version of the device. I'll send you a confirmation text.",
+      "How much is that going to cost?",
+      "Not very much. I know you can afford it.",
+      "Thank you for your help. Good bye."
+    ]
+  }
+}

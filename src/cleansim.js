@@ -2,26 +2,34 @@ require("dotenv").config();
 const { readJsonFile } = require('flexsim-lib');
 
 const { fetchActivities } = require('./helpers/activity');
-const { parseAndValidateArgs } = require('./helpers/args');
+const { parseAndValidateArgs, logArgs } = require('./helpers/args');
 const { initializeCommonContext } = require('./helpers/context');
+const { removeRecordings } = require('./helpers/voice');
 const { removeTasks } = require('./helpers/task');
-const { fetchFlexsimWorkers, removeWorkers } = require('./helpers/worker');
+const { log } = require('./helpers/util');
+const { fetchFlexsimWorkers, logoutWorkers, removeWorkers } = require('./helpers/worker');
 const { fetchWorkflow } = require('./helpers/workflow');
+
 
 async function run() {
   const args = getArgs();
   const cfg = await readConfiguration(args);
-  console.log('cfg:', cfg);
+  log('cfg:', cfg);
   const context = initializeContext(cfg, args);
   await loadTwilioResources(context);
   if (context.workflow)
-    console.log(`read workflow: ${context.workflow.friendlyName}`);
+    log(`read workflow: ${context.workflow.friendlyName}`);
   else
-    console.log(`cannot read workflow???`);
+    log(`cannot read workflow???`);
   await removeTasks(context);
+  await logoutWorkers(context);
   if (args.dletWorkers) {
     await removeWorkers(context);
   }
+  if (args.fromDt && args.toDt) {
+    await removeRecordings(context);
+  }
+  log('flexsim cleanup complete');
 }
 
 run();
@@ -29,9 +37,7 @@ run();
 async function loadTwilioResources(context) {
   context.workflow = await fetchWorkflow(context);
   context.workers = await fetchFlexsimWorkers(context);
-  if (context.args.dletWorkers) {
-    context.activities = await fetchActivities(context);
-  }
+  context.activities = await fetchActivities(context);
 }
 
 const initializeContext = (cfg, args) => {
@@ -41,7 +47,7 @@ const initializeContext = (cfg, args) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', W: 'dletWorkers' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', W: 'dletWorkers', f: 'fromDt', t: 'toDt' },
     required: []
   });
   const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID } = process.env;
@@ -50,11 +56,7 @@ function getArgs() {
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
   args.dletWorkers = args.dletWorkers || false;
-  const { acct, wrkspc, cfgdir, dletWorkers } = args;
-  console.log('acct:', acct);
-  console.log('wrkspc:', wrkspc);
-  console.log('cfgdir:', cfgdir);
-  console.log('dletWorkers:', dletWorkers);
+  logArgs(args);
   return args;
 }
 

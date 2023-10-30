@@ -1,6 +1,7 @@
 {
   "brand": "Industrias del Bùho",
   "agentCnt": 20,
+  "realVoice": false,
   "center": {
     "country": "SP",
     "state": "CAT",

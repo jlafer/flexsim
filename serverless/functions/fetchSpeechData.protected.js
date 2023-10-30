@@ -7,15 +7,9 @@ let helpers = require(helpersPath);
 exports.handler = async function (context, event, callback) {
   const { FlowSid, ixnId } = event;
 
-  const url = 'https://flexsim-acme-3217-prod.twil.io/speech.json';
-
   const ixnData = await helpers.fetchIxnData(context, 'calls', ixnId);
   const twiml = new Twilio.twiml.VoiceResponse();
-
-  //const assets = Runtime.getAssets();
-  //console.log('read assets:', assets);
-  //const openFile = assets['/speech.json'].open;
-  //const speech = JSON.parse(openFile());
+  const url = `https://${context.SERVERLESS_ASSETS_SUBDOMAIN}-prod.twil.io/speech.json`;
   const resp = await axios.get(url);
   const speech = resp.data;
   console.log('speech:', speech);
@@ -26,7 +20,9 @@ exports.handler = async function (context, event, callback) {
       pauseBetween: 3
     }
   );
-
-  twiml.redirect({ method: 'POST' }, `https://webhooks.twilio.com/v1/Accounts/${context.ACCOUNT_SID}/Flows/${FlowSid}?FlowEvent=return`);
+  twiml.redirect(
+    { method: 'POST' },
+    `https://webhooks.twilio.com/v1/Accounts/${context.ACCOUNT_SID}/Flows/${FlowSid}?FlowEvent=return`
+  );
   callback(null, twiml);
 };

@@ -2,12 +2,18 @@
 node src/genconfig.js --domaindir domain --cfgdir config/flexstats
 node src/genconfig.js --domaindir config/zscaler --cfgdir config/zscaler
 
+# Prepare Twilio project
+node src/installAssets.js --cfgdir config/flexstats
+
 # (Optional) Voice timing generation
 node src/gentiming.js --cfgdir config/flexstats
 
 # Deploy Time
 node src/deploy.js --cfgdir config/flexstats
+node src/deploySpeech.js --cfgdir config/flexstats
+
 node src/deploy.js --cfgdir config/zscaler
+node src/deploySpeech.js --cfgdir config/zscaler
 
 # Execution Time
 node src/agentsim.js --cfgdir config/flexstats

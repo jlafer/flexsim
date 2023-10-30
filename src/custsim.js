@@ -199,7 +199,7 @@ const getAddress = (ctx, channelName) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', l: 'locale', p: 'port' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', p: 'port' },
     required: []
   });
   const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, CUSTSIM_HOST, CUSTSIM_PORT, SYNC_SVC_SID, SERVERLESS_FN_SUBDOMAIN } = process.env;
@@ -207,8 +207,8 @@ function getArgs() {
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
-  args.timeLim = args.timeLim || 3600;
-  args.locale = args.locale || 'en-us';
+  //args.timeLim = args.timeLim || 3600;
+  //args.locale = args.locale || 'en-us';
   args.custsimHost = CUSTSIM_HOST;
   args.port = args.port || CUSTSIM_PORT || 3001;
   args.syncSvcSid = SYNC_SVC_SID;

@@ -1,6 +1,7 @@
 {
   "brand": "Owl Industries",
   "agentCnt": 10,
+  "realVoice": false,
   "customers": {
     "country": "US",
     "phoneFormat": "+1#########",

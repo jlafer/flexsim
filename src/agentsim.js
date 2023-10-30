@@ -45,7 +45,7 @@ async function init() {
     res.send('Hello World!')
   })
 
-  // the /reservation endpoint is called by the assignmentCallbackURL configured on the Workflow
+  // the /reservation endpoint is called by the assignmentCallbackURL configured on the Workflow;
   // for voice calls, it responds with an instruction to add the agent phone to the conference
   // for other channels, it accepts the reservation
 
@@ -59,7 +59,7 @@ async function init() {
     const talkTime = getDimensionValue(context, 'talkTime', valuesDescriptor.id);
     const wrapTime = getDimensionValue(context, 'wrapTime', valuesDescriptor.id);
     const channelName = getDimensionValue(context, 'channel', valuesDescriptor.id);
-    if (channelName === 'voice') {
+    if (channelName === 'voice' && context.cfg.metadata.realVoice) {
       await startConference(context, taskSid, reservationSid);
       res.status(200).send({});
     }
@@ -75,8 +75,7 @@ async function init() {
     const { TaskAge, TaskSid, ReservationSid, TaskAttributes, WorkerSid, WorkerAttributes } = body;
 
     const taskAttributes = JSON.parse(TaskAttributes);
-    log('attributes:', taskAttributes);
-    log('media:', taskAttributes.conversations.media);
+    //log('attributes:', taskAttributes);
     const { ixnId, call_sid } = taskAttributes;
     mapTaskToIxn(context, TaskSid, ixnId);
     mapTaskToCall(context, TaskSid, call_sid);
@@ -289,10 +288,10 @@ const taskToCall = (ctx, taskSid) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', p: 'port' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', p: 'port', s: 'seed' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_HOST, AGENTSIM_PORT, CUSTSIM_HOST, SYNC_SVC_SID, SERVERLESS_FN_SUBDOMAIN } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, AGENTSIM_HOST, AGENTSIM_PORT, CUSTSIM_HOST, SYNC_SVC_SID, RANDOM_SEED, SERVERLESS_FN_SUBDOMAIN } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
@@ -302,6 +301,7 @@ function getArgs() {
   args.agentsimHost = AGENTSIM_HOST;
   args.custsimHost = CUSTSIM_HOST;
   args.syncSvcSid = SYNC_SVC_SID;
+  args.seed = args.seed || RANDOM_SEED;
   args.serverlessSubdomain = SERVERLESS_FN_SUBDOMAIN;
   logArgs(args);
   return args;

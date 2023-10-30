@@ -28,11 +28,11 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "GenTiming",
+      "name": "TimeSpeech",
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}/src/gentiming.js",
+      "program": "${workspaceFolder}/src/timeSpeech.js",
       "args": [
         "-c",
         "config/flexstats"

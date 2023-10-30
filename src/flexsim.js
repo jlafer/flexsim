@@ -35,8 +35,8 @@ async function run() {
     const customAttrs = getAttributes(context, valuesDescriptor);
     const channelName = getDimValue(dimValues, valuesDescriptor.id, channelDim);
     const item = { key: ixnId, data: { taskStatus: 'initiated', ixnValues, attributes: customAttrs, customer }, itemTtl: 240 };
-    const syncMapItem = await createSyncMapItem(client, args.syncSvcSid, syncMap.sid, item);
-    if (channelName === 'voice') {
+    await createSyncMapItem(client, args.syncSvcSid, syncMap.sid, item);
+    if (channelName === 'voice' && cfg.metadata.realVoice) {
       const callSid = await submitInteraction(context, ixnId, customer, valuesDescriptor);
       log(`made call ${formatSid(callSid)}`);
     }
@@ -109,16 +109,17 @@ const initializeContext = (cfg, args) => {
 
 function getArgs() {
   const args = parseAndValidateArgs({
-    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', l: 'locale' },
+    aliases: { a: 'acct', A: 'auth', w: 'wrkspc', c: 'cfgdir', t: 'timeLim', l: 'locale', s: 'seed' },
     required: []
   });
-  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, CUSTSIM_HOST, SYNC_SVC_SID } = process.env;
+  const { ACCOUNT_SID, AUTH_TOKEN, WRKSPC_SID, CUSTSIM_HOST, SYNC_SVC_SID, RANDOM_SEED } = process.env;
   args.acct = args.acct || ACCOUNT_SID;
   args.auth = args.auth || AUTH_TOKEN;
   args.wrkspc = args.wrkspc || WRKSPC_SID;
   args.cfgdir = args.cfgdir || 'config';
   args.timeLim = args.timeLim || 3600;
   args.locale = args.locale || 'en-us';
+  args.seed = args.seed || RANDOM_SEED;
   args.custsimHost = CUSTSIM_HOST;
   args.syncSvcSid = SYNC_SVC_SID;
   logArgs(args);

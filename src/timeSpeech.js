@@ -61,7 +61,7 @@ async function getPartyTiming(textList, centerVoice, custVoice) {
 }
 
 async function getTimingForResponse(speech, voice) {
-  const [tech, persona] = voice.split('.');
+  const [_tech, persona] = voice.split('.');
   const client = new PollyClient();
   const input = {
     Engine: "standard",
@@ -101,6 +101,7 @@ function getArgs() {
     aliases: { d: 'domaindir', c: 'cfgdir', l: 'locale' },
     required: []
   });
+  args.cfgdir = args.cfgdir || 'config';
   args.locale = args.locale || 'en-us';
   logArgs(args);
   return args;
